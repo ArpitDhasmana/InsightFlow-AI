@@ -10,16 +10,16 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #26110d;
-    --bg-2: #2f1712;
-    --card: #351b13;
-    --line: #4d2c21;
-    --ink: #f4e9dd;
-    --ink-soft: #bfa393;
-    --accent: #e8623a;
-    --accent-2: #f0a074;
+    --bg: #0e1116;
+    --bg-2: #151b24;
+    --card: #171e28;
+    --line: #28323f;
+    --ink: #e7ecf3;
+    --ink-soft: #8a97a8;
+    --accent: #2dd4bf;
+    --accent-2: #5eead4;
     --radius: 16px;
-    --shadow: 0 1px 2px rgba(0,0,0,.2), 0 18px 40px rgba(0,0,0,.28);
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 18px 40px rgba(0,0,0,.38);
   }
   * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -53,7 +53,7 @@
     border-radius: 999px;
     border: 1px solid var(--line);
     color: var(--accent-2);
-    background: rgba(232,98,58,.08);
+    background: rgba(45,212,191,.08);
   }
 
   .hero {
@@ -111,7 +111,7 @@
     cursor: pointer;
     transition: transform .15s ease-out, background .15s ease-out;
   }
-  .ask button:hover { background: #f06f47; }
+  .ask button:hover { background: #34e0cc; }
   .ask button:active { transform: scale(.97); }
   .ask button:disabled { opacity: .55; cursor: default; }
 
@@ -167,7 +167,7 @@
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
   .kpi {
     padding: 16px 18px;
-    background: rgba(232,98,58,.06);
+    background: rgba(45,212,191,.05);
     border: 1px solid var(--line);
     border-radius: 12px;
     transition: transform .15s ease-out, border-color .15s ease-out, background .15s ease-out;
@@ -185,9 +185,9 @@
   .kpi .value.neg { color: var(--accent-2); }
   .kpi .kpi-hint { margin-top: 10px; font-size: 11px; color: var(--accent-2); opacity: 0; transition: opacity .15s ease-out; }
   .kpi.interactive { cursor: pointer; }
-  .kpi.interactive:hover { transform: translateY(-3px); border-color: var(--accent); background: rgba(232,98,58,.12); }
+  .kpi.interactive:hover { transform: translateY(-3px); border-color: var(--accent); background: rgba(45,212,191,.10); }
   .kpi.interactive:hover .kpi-hint, .kpi.active .kpi-hint { opacity: 1; }
-  .kpi.active { border-color: var(--accent); background: rgba(232,98,58,.16); }
+  .kpi.active { border-color: var(--accent); background: rgba(45,212,191,.14); }
 
   ul.recs { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
   ul.recs li { padding-left: 30px; position: relative; color: var(--ink); }
@@ -211,9 +211,9 @@
   }
   th:hover { color: var(--ink); }
   th .sort { color: var(--accent); }
-  td { border-bottom: 1px solid rgba(77,44,33,.5); }
+  td { border-bottom: 1px solid rgba(40,50,63,.6); }
   td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
-  tr.hl td { background: rgba(232,98,58,.12); }
+  tr.hl td { background: rgba(45,212,191,.12); }
 
   .table-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .tbl-filter {
@@ -236,7 +236,7 @@
   .chart-box { position: relative; height: 300px; }
 
   .empty, .error { color: var(--ink-soft); text-align: center; padding: 30px; }
-  .error { color: #f0916a; }
+  .error { color: #f0918f; }
   .spinner {
     width: 18px; height: 18px; border: 2px solid #fff; border-top-color: transparent;
     border-radius: 50%; display: inline-block; animation: spin .7s linear infinite; vertical-align: -3px;
@@ -274,9 +274,9 @@
 </main>
 
 <script>
-Chart.defaults.color = "#bfa393";
+Chart.defaults.color = "#8a97a8";
 Chart.defaults.font.family = "'Space Grotesk', sans-serif";
-Chart.defaults.borderColor = "rgba(244,233,221,.07)";
+Chart.defaults.borderColor = "rgba(231,236,243,.06)";
 
 const SAMPLES = [
   "Show me the monthly revenue trend and forecast",
@@ -307,7 +307,7 @@ input.addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
 let charts = [];
 let dataFilterApi = null;
 let highlightRow = null;
-const WARM = ["#e8623a", "#f0a074", "#c9542e", "#f4c9a8", "#a8431f", "#e9b892", "#d97a4a", "#8f3a1c"];
+const WARM = ["#2dd4bf", "#5eead4", "#14b8a6", "#38bdf8", "#0e7490", "#99f6e4", "#22d3ee", "#0d9488"];
 function fmt(n) {
   if (typeof n !== "number") return n;
   return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -354,13 +354,13 @@ function chartCanvas(spec, delay) {
   const isLine = spec.type === "line";
   const isHbar = spec.type === "hbar";
   const isPie = spec.type === "doughnut" || spec.type === "pie";
-  const valTicks = { callback: v => fmt(v), color: "#bfa393" };
+  const valTicks = { callback: v => fmt(v), color: "#8a97a8" };
 
   let scales = {};
   if (!isPie) {
     scales = isHbar
-      ? { x: { beginAtZero: true, grid: { color: "rgba(244,233,221,.06)" }, ticks: valTicks }, y: { grid: { display: false } } }
-      : { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: "rgba(244,233,221,.06)" }, ticks: valTicks } };
+      ? { x: { beginAtZero: true, grid: { color: "rgba(231,236,243,.06)" }, ticks: valTicks }, y: { grid: { display: false } } }
+      : { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: "rgba(231,236,243,.06)" }, ticks: valTicks } };
   }
 
   charts.push(new Chart(ctx, {
@@ -373,15 +373,15 @@ function chartCanvas(spec, delay) {
             label: s.name,
             data: s.data,
             backgroundColor: spec.labels.map((_, i) => WARM[i % WARM.length]),
-            borderColor: "#351b13",
+            borderColor: "#171e28",
             borderWidth: 2,
           };
         }
         return {
           label: s.name,
           data: s.data,
-          borderColor: s.name === "forecast" ? "#f0a074" : (isLine ? "#f0d9c6" : "#e8623a"),
-          backgroundColor: isLine ? "transparent" : "#e8623a",
+          borderColor: s.name === "forecast" ? "#5eead4" : (isLine ? "#cdd8e6" : "#2dd4bf"),
+          backgroundColor: isLine ? "transparent" : "#2dd4bf",
           borderDash: s.name === "forecast" ? [6, 5] : [],
           borderWidth: 2,
           pointRadius: isLine ? 0 : undefined,

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>InsightFlow AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #fbfaf7;
+    --ink: #1c1d1a;
+    --ink-soft: #55574f;
+    --accent: #0e8f78;
+    --accent-soft: #0e8f7815;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(28,29,26,.06), 0 8px 24px rgba(28,29,26,.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  header {
+    padding: 28px 32px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; }
+  header .tag { color: var(--ink-soft); font-size: 14px; }
+  header .badge {
+    margin-left: auto;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  main { max-width: 1080px; margin: 0 auto; padding: 0 32px 64px; }
+  .ask {
+    display: flex;
+    gap: 10px;
+    background: var(--surface);
+    padding: 10px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .ask input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 16px;
+    padding: 12px 14px;
+    color: var(--ink);
+    outline: none;
+  }
+  .ask button {
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font: inherit;
+    font-weight: 600;
+    padding: 0 22px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform .15s ease-out, opacity .15s ease-out;
+  }
+  .ask button:hover { opacity: .92; }
+  .ask button:active { transform: scale(.97); }
+  .ask button:disabled { opacity: .5; cursor: default; }
+  .samples { margin: 14px 2px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  .samples button {
+    border: none;
+    background: var(--surface);
+    color: var(--ink-soft);
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: color .15s ease-out;
+  }
+  .samples button:hover { color: var(--accent); }
+  #results { margin-top: 28px; display: grid; gap: 20px; }
+  .card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px 24px;
+    opacity: 0;
+    transform: translateY(8px);
+    animation: rise .28s ease-out forwards;
+  }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .card { animation: fade .28s ease-out forwards; transform: none; }
+    @keyframes fade { to { opacity: 1; } }
+  }
+  .card h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
+  .summary { font-size: 17px; line-height: 1.6; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+  .kpi { padding: 16px; border-radius: 10px; background: var(--accent-soft); }
+  .kpi .label { font-size: 12px; color: var(--ink-soft); }
+  .kpi .value { font-size: 24px; font-weight: 700; letter-spacing: -.02em; margin-top: 4px; }
+  ul.recs { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 10px; }
+  ul.recs li { padding-left: 24px; position: relative; }
+  ul.recs li::before { content: "→"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+  pre.sql {
+    margin: 0; background: var(--ink); color: #e6e6e2; padding: 16px;
+    border-radius: 10px; overflow-x: auto; font-size: 13px; line-height: 1.5;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; }
+  th { color: var(--ink-soft); font-weight: 600; border-bottom: 1px solid #e4e3dd; }
+  td { border-bottom: 1px solid #efeee9; }
+  .empty, .error { color: var(--ink-soft); text-align: center; padding: 40px; }
+  .error { color: #b3261e; }
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid #fff; border-top-color: transparent;
+    border-radius: 50%; display: inline-block; animation: spin .7s linear infinite; vertical-align: -3px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>InsightFlow&nbsp;AI</h1>
+  <span class="tag">Ask a business question, get an executive answer.</span>
+  <span class="badge" id="mode">checking…</span>
+</header>
+<main>
+  <div class="ask">
+    <input id="q" placeholder="e.g. What was our revenue by region last quarter?" autocomplete="off" />
+    <button id="go">Ask</button>
+  </div>
+  <div class="samples" id="samples"></div>
+  <div id="results">
+    <div class="empty">Ask a question to generate an executive briefing.</div>
+  </div>
+</main>
+<script>
+const SAMPLES = [
+  "Show me the monthly revenue trend and forecast",
+  "What is our profit by region?",
+  "Which product categories perform best?",
+  "Revenue by customer segment last quarter",
+  "Top products by revenue this year",
+];
+const samplesEl = document.getElementById("samples");
+SAMPLES.forEach(s => {
+  const b = document.createElement("button");
+  b.textContent = s;
+  b.onclick = () => { document.getElementById("q").value = s; ask(); };
+  samplesEl.appendChild(b);
+});
+
+fetch("/health").then(r => r.json()).then(h => {
+  const m = document.getElementById("mode");
+  m.textContent = h.llm_powered ? "LLM-powered" : "Heuristic mode";
+  if (!h.seeded) m.textContent = "DB not seeded";
+});
+
+const input = document.getElementById("q");
+const goBtn = document.getElementById("go");
+goBtn.onclick = ask;
+input.addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
+
+let charts = [];
+function fmt(n) {
+  if (typeof n !== "number") return n;
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+async function ask() {
+  const question = input.value.trim();
+  if (!question) return;
+  goBtn.disabled = true;
+  goBtn.innerHTML = '<span class="spinner"></span>';
+  const results = document.getElementById("results");
+  results.innerHTML = '<div class="empty">Analyzing…</div>';
+  try {
+    const res = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || res.statusText);
+    }
+    render(await res.json());
+  } catch (e) {
+    results.innerHTML = `<div class="error">${e.message}</div>`;
+  } finally {
+    goBtn.disabled = false;
+    goBtn.textContent = "Ask";
+  }
+}
+
+function card(title, bodyHtml, delay) {
+  const d = document.createElement("div");
+  d.className = "card";
+  d.style.animationDelay = (delay || 0) + "ms";
+  d.innerHTML = (title ? `<h2>${title}</h2>` : "") + bodyHtml;
+  return d;
+}
+
+function render(data) {
+  charts.forEach(c => c.destroy());
+  charts = [];
+  const results = document.getElementById("results");
+  results.innerHTML = "";
+  let step = 0;
+  const next = () => (step++ * 60);
+
+  // Executive summary
+  results.appendChild(card("Executive Summary", `<div class="summary">${data.executive_summary}</div>`, next()));
+
+  // KPIs
+  const k = data.kpis || {};
+  const cards = [];
+  if (k.total !== undefined) cards.push(["Total " + (k.metric || ""), fmt(k.total)]);
+  if (k.top) cards.push(["Top: " + k.top.name, fmt(k.top.value)]);
+  if (k.average !== undefined) cards.push(["Average", fmt(k.average)]);
+  if (k.period_growth_pct !== undefined) cards.push(["Period Growth", k.period_growth_pct + "%"]);
+  if (data.forecast && data.forecast.available) cards.push(["Forecast (next)", fmt(data.forecast.next_value)]);
+  if (cards.length) {
+    const html = '<div class="kpis">' + cards.map(([l, v]) =>
+      `<div class="kpi"><div class="label">${l}</div><div class="value">${v}</div></div>`).join("") + "</div>";
+    results.appendChild(card("Key Metrics", html, next()));
+  }
+
+  // Recommendations
+  if (data.recommendations && data.recommendations.length) {
+    const html = '<ul class="recs">' + data.recommendations.map(r => `<li>${r}</li>`).join("") + "</ul>";
+    results.appendChild(card("Recommendations", html, next()));
+  }
+
+  // Charts
+  (data.charts || []).forEach(spec => {
+    if (spec.type === "kpi") return;
+    const c = card(spec.title, "<canvas></canvas>", next());
+    results.appendChild(c);
+    const ctx = c.querySelector("canvas");
+    charts.push(new Chart(ctx, {
+      type: spec.type === "line" ? "line" : "bar",
+      data: {
+        labels: spec.labels,
+        datasets: spec.series.map((s, i) => ({
+          label: s.name,
+          data: s.data,
+          borderColor: i === 0 ? "#0e8f78" : "#c98a2b",
+          backgroundColor: i === 0 ? "#0e8f7855" : "#c98a2b55",
+          borderDash: s.name === "forecast" ? [6, 4] : [],
+          tension: 0.3,
+          spanGaps: true,
+        })),
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: spec.series.length > 1 } },
+        scales: { y: { beginAtZero: true } },
+      },
+    }));
+  });
+
+  // Data table
+  if (data.rows && data.rows.length) {
+    const cols = Object.keys(data.rows[0]);
+    const head = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
+    const body = data.rows.slice(0, 12).map(r =>
+      "<tr>" + cols.map(c => `<td>${typeof r[c] === "number" ? fmt(r[c]) : r[c]}</td>`).join("") + "</tr>").join("");
+    results.appendChild(card("Data", `<table>${head}${body}</table>`, next()));
+  }
+
+  // SQL
+  results.appendChild(card("Generated SQL", `<pre class="sql">${data.sql}</pre>`, next()));
+}
+</script>
+</body>
+</html>

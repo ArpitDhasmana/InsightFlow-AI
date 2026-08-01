@@ -6,52 +6,87 @@
 <title>InsightFlow AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #f5f4f0;
-    --surface: #fbfaf7;
-    --ink: #1c1d1a;
-    --ink-soft: #55574f;
-    --accent: #0e8f78;
-    --accent-soft: #0e8f7815;
-    --radius: 14px;
-    --shadow: 0 1px 2px rgba(28,29,26,.06), 0 8px 24px rgba(28,29,26,.08);
+    --bg: #26110d;
+    --bg-2: #2f1712;
+    --card: #351b13;
+    --line: #4d2c21;
+    --ink: #f4e9dd;
+    --ink-soft: #bfa393;
+    --accent: #e8623a;
+    --accent-2: #f0a074;
+    --radius: 16px;
+    --shadow: 0 1px 2px rgba(0,0,0,.2), 0 18px 40px rgba(0,0,0,.28);
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0;
     font-family: "Space Grotesk", system-ui, sans-serif;
     background: var(--bg);
     color: var(--ink);
-    line-height: 1.5;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
   }
-  header {
-    padding: 28px 32px;
+  a { color: inherit; }
+
+  nav {
     display: flex;
-    align-items: baseline;
-    gap: 14px;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 22px 40px;
+    max-width: 1160px;
+    margin: 0 auto;
   }
-  header h1 { font-size: 22px; margin: 0; letter-spacing: -.02em; }
-  header .tag { color: var(--ink-soft); font-size: 14px; }
-  header .badge {
+  .brand { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+  .brand span { color: var(--accent); }
+  nav .links { display: flex; gap: 26px; margin-left: 30px; color: var(--ink-soft); font-size: 15px; }
+  nav .links a { text-decoration: none; transition: color .15s ease-out; }
+  nav .links a:hover { color: var(--ink); }
+  .mode {
     margin-left: auto;
-    font-size: 12px;
-    padding: 4px 10px;
+    font-size: 13px;
+    padding: 7px 16px;
     border-radius: 999px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-weight: 600;
+    border: 1px solid var(--line);
+    color: var(--accent-2);
+    background: rgba(232,98,58,.08);
   }
-  main { max-width: 1080px; margin: 0 auto; padding: 0 32px 64px; }
+
+  .hero {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 60px 40px 30px;
+    text-align: center;
+  }
+  .hero h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(40px, 7vw, 82px);
+    line-height: 1.02;
+    letter-spacing: -.02em;
+    margin: 0 auto;
+    max-width: 14ch;
+  }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p {
+    color: var(--ink-soft);
+    font-size: 18px;
+    max-width: 52ch;
+    margin: 22px auto 0;
+  }
+
+  .ask-wrap { max-width: 720px; margin: 36px auto 0; padding: 0 40px; }
   .ask {
     display: flex;
     gap: 10px;
-    background: var(--surface);
-    padding: 10px;
-    border-radius: var(--radius);
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    padding: 8px;
+    border-radius: 999px;
     box-shadow: var(--shadow);
   }
   .ask input {
@@ -60,73 +95,110 @@
     background: transparent;
     font: inherit;
     font-size: 16px;
-    padding: 12px 14px;
+    padding: 12px 18px;
     color: var(--ink);
     outline: none;
   }
+  .ask input::placeholder { color: var(--ink-soft); }
   .ask button {
     border: none;
     background: var(--accent);
     color: #fff;
     font: inherit;
     font-weight: 600;
-    padding: 0 22px;
-    border-radius: 10px;
+    padding: 0 26px;
+    border-radius: 999px;
     cursor: pointer;
-    transition: transform .15s ease-out, opacity .15s ease-out;
+    transition: transform .15s ease-out, background .15s ease-out;
   }
-  .ask button:hover { opacity: .92; }
+  .ask button:hover { background: #f06f47; }
   .ask button:active { transform: scale(.97); }
-  .ask button:disabled { opacity: .5; cursor: default; }
-  .samples { margin: 14px 2px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+  .ask button:disabled { opacity: .55; cursor: default; }
+
+  .samples { max-width: 720px; margin: 16px auto 0; padding: 0 40px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   .samples button {
-    border: none;
-    background: var(--surface);
+    border: 1px solid var(--line);
+    background: transparent;
     color: var(--ink-soft);
     font: inherit;
     font-size: 13px;
-    padding: 7px 13px;
+    padding: 8px 15px;
     border-radius: 999px;
     cursor: pointer;
-    box-shadow: var(--shadow);
-    transition: color .15s ease-out;
+    transition: color .15s ease-out, border-color .15s ease-out;
   }
-  .samples button:hover { color: var(--accent); }
-  #results { margin-top: 28px; display: grid; gap: 20px; }
+  .samples button:hover { color: var(--accent-2); border-color: var(--accent); }
+
+  main { max-width: 1160px; margin: 0 auto; padding: 40px 40px 80px; }
+  #results { display: grid; gap: 22px; }
+  .grid-2 { display: grid; grid-template-columns: 1.15fr .85fr; gap: 22px; align-items: start; }
+  @media (max-width: 820px) { .grid-2 { grid-template-columns: 1fr; } }
+
   .card {
-    background: var(--surface);
+    background: var(--card);
+    border: 1px solid var(--line);
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 22px 24px;
+    padding: 26px 28px;
     opacity: 0;
-    transform: translateY(8px);
-    animation: rise .28s ease-out forwards;
+    transform: translateY(10px);
+    animation: rise .3s ease-out forwards;
   }
   @keyframes rise { to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) {
-    .card { animation: fade .28s ease-out forwards; transform: none; }
+    html { scroll-behavior: auto; }
+    .card { animation: fade .3s ease-out forwards; transform: none; }
     @keyframes fade { to { opacity: 1; } }
   }
-  .card h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
-  .summary { font-size: 17px; line-height: 1.6; }
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
-  .kpi { padding: 16px; border-radius: 10px; background: var(--accent-soft); }
-  .kpi .label { font-size: 12px; color: var(--ink-soft); }
-  .kpi .value { font-size: 24px; font-weight: 700; letter-spacing: -.02em; margin-top: 4px; }
-  ul.recs { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 10px; }
-  ul.recs li { padding-left: 24px; position: relative; }
-  ul.recs li::before { content: "→"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+  .card h2 {
+    margin: 0 0 16px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    color: var(--accent-2);
+    font-weight: 600;
+  }
+  .summary {
+    font-family: "Fraunces", Georgia, serif;
+    font-size: 24px;
+    line-height: 1.4;
+    font-weight: 400;
+  }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px; background: var(--line); border-radius: 12px; overflow: hidden; }
+  .kpi { padding: 20px; background: var(--card); }
+  .kpi .label { font-size: 12px; color: var(--ink-soft); letter-spacing: .02em; }
+  .kpi .value {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 34px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: -.02em;
+    margin-top: 6px;
+    line-height: 1;
+  }
+  .kpi .value.neg { color: var(--accent-2); }
+
+  ul.recs { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  ul.recs li { padding-left: 30px; position: relative; color: var(--ink); }
+  ul.recs li::before {
+    content: "";
+    position: absolute; left: 0; top: 9px;
+    width: 14px; height: 2px; background: var(--accent);
+  }
+
   pre.sql {
-    margin: 0; background: var(--ink); color: #e6e6e2; padding: 16px;
-    border-radius: 10px; overflow-x: auto; font-size: 13px; line-height: 1.5;
-    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    margin: 0; background: #1c0c08; color: #e7d6c8; padding: 18px;
+    border-radius: 12px; overflow-x: auto; font-size: 13px; line-height: 1.6;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; border: 1px solid var(--line);
   }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 8px 10px; }
-  th { color: var(--ink-soft); font-weight: 600; border-bottom: 1px solid #e4e3dd; }
-  td { border-bottom: 1px solid #efeee9; }
-  .empty, .error { color: var(--ink-soft); text-align: center; padding: 40px; }
-  .error { color: #b3261e; }
+  th, td { text-align: left; padding: 9px 12px; }
+  th { color: var(--ink-soft); font-weight: 500; border-bottom: 1px solid var(--line); text-transform: capitalize; }
+  td { border-bottom: 1px solid rgba(77,44,33,.5); }
+  td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .empty, .error { color: var(--ink-soft); text-align: center; padding: 30px; }
+  .error { color: #f0916a; }
   .spinner {
     width: 18px; height: 18px; border: 2px solid #fff; border-top-color: transparent;
     border-radius: 50%; display: inline-block; animation: spin .7s linear infinite; vertical-align: -3px;
@@ -135,22 +207,39 @@
 </style>
 </head>
 <body>
-<header>
-  <h1>InsightFlow&nbsp;AI</h1>
-  <span class="tag">Ask a business question, get an executive answer.</span>
-  <span class="badge" id="mode">checking…</span>
+<nav>
+  <div class="brand">Insight<span>Flow</span></div>
+  <div class="links">
+    <a href="#ask">Ask</a>
+    <a href="#results">Insights</a>
+  </div>
+  <span class="mode" id="mode">checking…</span>
+</nav>
+
+<header class="hero">
+  <h1>Together, we turn data into <em>decisions.</em></h1>
+  <p>InsightFlow AI writes the analysis, forecast, and executive recommendation — from a single plain-English question.</p>
 </header>
-<main>
+
+<section id="ask" class="ask-wrap">
   <div class="ask">
-    <input id="q" placeholder="e.g. What was our revenue by region last quarter?" autocomplete="off" />
+    <input id="q" placeholder="Ask a business question…" autocomplete="off" />
     <button id="go">Ask</button>
   </div>
-  <div class="samples" id="samples"></div>
+</section>
+<div class="samples" id="samples"></div>
+
+<main>
   <div id="results">
     <div class="empty">Ask a question to generate an executive briefing.</div>
   </div>
 </main>
+
 <script>
+Chart.defaults.color = "#bfa393";
+Chart.defaults.font.family = "'Space Grotesk', sans-serif";
+Chart.defaults.borderColor = "rgba(244,233,221,.07)";
+
 const SAMPLES = [
   "Show me the monthly revenue trend and forecast",
   "What is our profit by region?",
@@ -201,6 +290,7 @@ async function ask() {
       throw new Error(err.detail || res.statusText);
     }
     render(await res.json());
+    document.getElementById("results").scrollIntoView({ block: "start" });
   } catch (e) {
     results.innerHTML = `<div class="error">${e.message}</div>`;
   } finally {
@@ -209,12 +299,50 @@ async function ask() {
   }
 }
 
-function card(title, bodyHtml, delay) {
+function card(title, bodyHtml, delay, cls) {
   const d = document.createElement("div");
-  d.className = "card";
+  d.className = "card" + (cls ? " " + cls : "");
   d.style.animationDelay = (delay || 0) + "ms";
   d.innerHTML = (title ? `<h2>${title}</h2>` : "") + bodyHtml;
   return d;
+}
+
+function chartCanvas(spec, delay) {
+  const c = card(spec.title, "<canvas></canvas>", delay);
+  const ctx = c.querySelector("canvas");
+  charts.push(new Chart(ctx, {
+    type: spec.type === "line" ? "line" : "bar",
+    data: {
+      labels: spec.labels,
+      datasets: spec.series.map((s) => {
+        const cream = "#f0d9c6";
+        const primary = spec.type === "line";
+        return {
+          label: s.name,
+          data: s.data,
+          borderColor: s.name === "forecast" ? "#f0a074" : (primary ? cream : "#e8623a"),
+          backgroundColor: primary ? "transparent" : "#e8623a",
+          borderDash: s.name === "forecast" ? [6, 5] : [],
+          borderWidth: 2,
+          pointRadius: primary ? 0 : undefined,
+          pointHoverRadius: 4,
+          tension: 0.4,
+          spanGaps: true,
+          borderRadius: primary ? 0 : 6,
+          maxBarThickness: 46,
+        };
+      }),
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: spec.series.length > 1, labels: { boxWidth: 12, boxHeight: 12 } } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: "rgba(244,233,221,.06)" }, ticks: { callback: v => fmt(v) } },
+        x: { grid: { display: false } },
+      },
+    },
+  }));
+  return c;
 }
 
 function render(data) {
@@ -225,58 +353,34 @@ function render(data) {
   let step = 0;
   const next = () => (step++ * 60);
 
-  // Executive summary
   results.appendChild(card("Executive Summary", `<div class="summary">${data.executive_summary}</div>`, next()));
 
-  // KPIs
   const k = data.kpis || {};
   const cards = [];
-  if (k.total !== undefined) cards.push(["Total " + (k.metric || ""), fmt(k.total)]);
-  if (k.top) cards.push(["Top: " + k.top.name, fmt(k.top.value)]);
-  if (k.average !== undefined) cards.push(["Average", fmt(k.average)]);
-  if (k.period_growth_pct !== undefined) cards.push(["Period Growth", k.period_growth_pct + "%"]);
-  if (data.forecast && data.forecast.available) cards.push(["Forecast (next)", fmt(data.forecast.next_value)]);
-  if (cards.length) {
-    const html = '<div class="kpis">' + cards.map(([l, v]) =>
-      `<div class="kpi"><div class="label">${l}</div><div class="value">${v}</div></div>`).join("") + "</div>";
-    results.appendChild(card("Key Metrics", html, next()));
-  }
+  if (k.total !== undefined) cards.push(["Total " + (k.metric || ""), fmt(k.total), false]);
+  if (k.top) cards.push(["Top · " + k.top.name, fmt(k.top.value), false]);
+  if (k.average !== undefined) cards.push(["Average", fmt(k.average), false]);
+  if (k.period_growth_pct !== undefined) cards.push(["Period Growth", k.period_growth_pct + "%", k.period_growth_pct < 0]);
+  if (data.forecast && data.forecast.available) cards.push(["Forecast · next", fmt(data.forecast.next_value), false]);
 
-  // Recommendations
+  const grid = document.createElement("div");
+  grid.className = "grid-2";
+  if (cards.length) {
+    const html = '<div class="kpis">' + cards.map(([l, v, neg]) =>
+      `<div class="kpi"><div class="label">${l}</div><div class="value${neg ? " neg" : ""}">${v}</div></div>`).join("") + "</div>";
+    grid.appendChild(card("Key Metrics", html, next()));
+  }
   if (data.recommendations && data.recommendations.length) {
     const html = '<ul class="recs">' + data.recommendations.map(r => `<li>${r}</li>`).join("") + "</ul>";
-    results.appendChild(card("Recommendations", html, next()));
+    grid.appendChild(card("Recommendations", html, next()));
   }
+  if (grid.children.length) results.appendChild(grid);
 
-  // Charts
   (data.charts || []).forEach(spec => {
     if (spec.type === "kpi") return;
-    const c = card(spec.title, "<canvas></canvas>", next());
-    results.appendChild(c);
-    const ctx = c.querySelector("canvas");
-    charts.push(new Chart(ctx, {
-      type: spec.type === "line" ? "line" : "bar",
-      data: {
-        labels: spec.labels,
-        datasets: spec.series.map((s, i) => ({
-          label: s.name,
-          data: s.data,
-          borderColor: i === 0 ? "#0e8f78" : "#c98a2b",
-          backgroundColor: i === 0 ? "#0e8f7855" : "#c98a2b55",
-          borderDash: s.name === "forecast" ? [6, 4] : [],
-          tension: 0.3,
-          spanGaps: true,
-        })),
-      },
-      options: {
-        responsive: true,
-        plugins: { legend: { display: spec.series.length > 1 } },
-        scales: { y: { beginAtZero: true } },
-      },
-    }));
+    results.appendChild(chartCanvas(spec, next()));
   });
 
-  // Data table
   if (data.rows && data.rows.length) {
     const cols = Object.keys(data.rows[0]);
     const head = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
@@ -285,7 +389,6 @@ function render(data) {
     results.appendChild(card("Data", `<table>${head}${body}</table>`, next()));
   }
 
-  // SQL
   results.appendChild(card("Generated SQL", `<pre class="sql">${data.sql}</pre>`, next()));
 }
 </script>

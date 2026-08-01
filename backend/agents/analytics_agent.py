@@ -44,7 +44,7 @@ def run(state: PipelineState) -> PipelineState:
     kpis["total"] = total
     kpis["value_key"] = value_key
 
-    if label_key:
+    if label_key and len(rows) >= 2:
         ranked = sorted(rows, key=lambda r: float(r[value_key]), reverse=True)
         top = ranked[0]
         bottom = ranked[-1]

@@ -7,9 +7,11 @@ agent can build a query deterministically.
 """
 from __future__ import annotations
 
+import calendar
 import re
 from datetime import date
 
+from ..config import settings
 from ..llm import llm
 from .constants import TIME_DIMENSIONS
 from .state import PipelineState
@@ -47,6 +49,10 @@ MONTHS = {
     "oct": 10, "november": 11, "nov": 11, "december": 12, "dec": 12,
 }
 
+_FY_START = settings.fiscal_year_start_month
+_FY_START_NAME = calendar.month_name[_FY_START]
+_FY_END_NAME = calendar.month_name[12 if _FY_START == 1 else _FY_START - 1]
+
 SYSTEM = (
     "You are an intent parser for a business intelligence system over a sales "
     "database. Return JSON with keys: \n"
@@ -66,11 +72,18 @@ SYSTEM = (
     "Treat 'FY', 'FY25', 'fiscal year', 'financial year' as dimension "
     "fiscal_year when comparing or trending fiscal years; use time_period "
     "'fy:YYYY' only to filter to one specific fiscal year. "
+    f"The fiscal year starts in {_FY_START_NAME}: FYN runs {_FY_START_NAME} "
+    f"(N-1) to {_FY_END_NAME} N (e.g. FY2026 = {_FY_START_NAME} 2025 to "
+    f"{_FY_END_NAME} 2026). For a specific month named inside a fiscal year, "
+    "resolve it to that month's real calendar year and return a 'month:YYYY-MM' "
+    "time_period with dimension null. "
     "Examples: 'daily revenue in January 2026' -> {metric:revenue,dimension:day,"
     "time_period:month:2026-01,intent_type:trend}. 'revenue by brand' -> "
     "{metric:revenue,dimension:brand,time_period:all_time,intent_type:comparison}. "
     "'fy26 and 25 trends' -> {metric:revenue,dimension:fiscal_year,"
-    "time_period:all_time,intent_type:trend}."
+    "time_period:all_time,intent_type:trend}. "
+    "'fy26 july data' -> {metric:revenue,dimension:null,"
+    "time_period:month:2025-07,intent_type:aggregate}."
 )
 
 
@@ -81,10 +94,26 @@ def _match(mapping: dict, q: str, default=None):
     return default
 
 
+def _month_year_in_fy(month_num: int, fy_end_year: int, fy_start_month: int) -> int:
+    """Calendar year of a month within a fiscal year labelled by its end year."""
+    if fy_start_month == 1:
+        return fy_end_year
+    return fy_end_year - 1 if month_num >= fy_start_month else fy_end_year
+
+
 def _parse_time(q: str) -> str:
     today = date.today()
+    fy_m = re.search(r"\bfy\s?(\d{2,4})\b", q)
+    fy_year = None
+    if fy_m:
+        n = int(fy_m.group(1))
+        fy_year = 2000 + n if n < 100 else n
+
     year_m = re.search(r"\b(20\d{2})\b", q)
     year = int(year_m.group(1)) if year_m else None
+    # A 4-digit year alongside 'fiscal'/'financial year' is the fiscal year.
+    if fy_year is None and year and ("fiscal" in q or "financial year" in q):
+        fy_year, year = year, None
 
     if "year to date" in q or "ytd" in q:
         return "ytd"
@@ -107,22 +136,24 @@ def _parse_time(q: str) -> str:
     if "last year" in q or "past year" in q:
         return "last_year"
 
-    fy = re.search(r"\bfy\s?(20\d{2})\b", q)
-    if fy:
-        return f"fy:{fy.group(1)}"
-    if ("fiscal" in q or "financial year" in q) and year:
-        return f"fy:{year}"
+    # A named month resolves to a real calendar year — inside a fiscal year if one
+    # is given, else an explicit year, else the current year.
+    for name, num in MONTHS.items():
+        if name == "may" and year is None and fy_year is None:
+            continue
+        if re.search(rf"\b{name}\b", q):
+            if fy_year is not None:
+                y = _month_year_in_fy(num, fy_year, settings.fiscal_year_start_month)
+            else:
+                y = year or today.year
+            return f"month:{y:04d}-{num:02d}"
+
+    if fy_year is not None:
+        return f"fy:{fy_year}"
 
     qm = re.search(r"\bq([1-4])\b", q)
     if qm:
         return f"quarter:{year or today.year}-Q{qm.group(1)}"
-
-    for name, num in MONTHS.items():
-        # 'may' is also a common modal verb; only treat it as a month with a year.
-        if name == "may" and year is None:
-            continue
-        if re.search(rf"\b{name}\b", q):
-            return f"month:{year or today.year:04d}-{num:02d}"
 
     if year:
         return f"year:{year}"
@@ -135,8 +166,10 @@ def _heuristic(question: str) -> dict:
     dimension = _match(DIMENSIONS, q, None)
     time_period = _parse_time(q)
 
-    # 'fy', 'fy25', 'fiscal year' etc. describe the fiscal-year dimension.
-    if "fiscal" in q or "financial year" in q or re.search(r"\bfy\s?\d{2,4}\b", q):
+    # 'fy', 'fy25', 'fiscal year' etc. describe the fiscal-year dimension — unless a
+    # specific month within a fiscal year was requested (that's a month filter).
+    is_fy = "fiscal" in q or "financial year" in q or re.search(r"\bfy\s?\d{2,4}\b", q)
+    if is_fy and not time_period.startswith("month:"):
         dimension = "fiscal_year"
 
     if any(w in q for w in ["top", "best", "worst", "rank", "highest", "lowest", "most", "least"]):

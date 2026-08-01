@@ -63,9 +63,14 @@ SYSTEM = (
     "time_period to that month), 'year' for yearly, 'fiscal_year' for financial "
     "years, 'week' for weekly, 'day_of_week' for weekday patterns. A specific "
     "period like 'in 2025' is a time_period (year:2025), not a dimension. "
+    "Treat 'FY', 'FY25', 'fiscal year', 'financial year' as dimension "
+    "fiscal_year when comparing or trending fiscal years; use time_period "
+    "'fy:YYYY' only to filter to one specific fiscal year. "
     "Examples: 'daily revenue in January 2026' -> {metric:revenue,dimension:day,"
     "time_period:month:2026-01,intent_type:trend}. 'revenue by brand' -> "
-    "{metric:revenue,dimension:brand,time_period:all_time,intent_type:comparison}."
+    "{metric:revenue,dimension:brand,time_period:all_time,intent_type:comparison}. "
+    "'fy26 and 25 trends' -> {metric:revenue,dimension:fiscal_year,"
+    "time_period:all_time,intent_type:trend}."
 )
 
 
@@ -129,6 +134,10 @@ def _heuristic(question: str) -> dict:
     metric = _match(METRICS, q, "revenue")
     dimension = _match(DIMENSIONS, q, None)
     time_period = _parse_time(q)
+
+    # 'fy', 'fy25', 'fiscal year' etc. describe the fiscal-year dimension.
+    if "fiscal" in q or "financial year" in q or re.search(r"\bfy\s?\d{2,4}\b", q):
+        dimension = "fiscal_year"
 
     if any(w in q for w in ["top", "best", "worst", "rank", "highest", "lowest", "most", "least"]):
         intent_type = "ranking"

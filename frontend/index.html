@@ -181,6 +181,7 @@
     letter-spacing: -.02em;
     margin-top: 6px;
     line-height: 1;
+    white-space: nowrap;
   }
   .kpi .value.neg { color: var(--accent-2); }
   .kpi .kpi-hint { margin-top: 10px; font-size: 11px; color: var(--accent-2); opacity: 0; transition: opacity .15s ease-out; }
@@ -314,6 +315,14 @@ const WARM = ["#2dd4bf", "#60a5fa", "#a78bfa", "#f472b6", "#fbbf24", "#4ade80", 
 function fmt(n) {
   if (typeof n !== "number") return n;
   return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+function fmtCompact(n) {
+  if (typeof n !== "number") return n;
+  const a = Math.abs(n);
+  if (a >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B";
+  if (a >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+  if (a >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+  return n.toLocaleString(undefined, { maximumFractionDigits: 1 });
 }
 
 async function ask() {
@@ -501,12 +510,12 @@ function render(data) {
 
   const k = data.kpis || {};
   const tiles = [];
-  if (k.total !== undefined) tiles.push({ label: "Total " + (k.metric || ""), value: fmt(k.total) });
-  if (k.top) tiles.push({ label: "Top · " + k.top.name, value: fmt(k.top.value), target: k.top.name });
-  if (k.bottom) tiles.push({ label: "Lowest · " + k.bottom.name, value: fmt(k.bottom.value), target: k.bottom.name });
-  if (k.average !== undefined) tiles.push({ label: "Average", value: fmt(k.average) });
+  if (k.total !== undefined) tiles.push({ label: "Total " + (k.metric || ""), value: fmtCompact(k.total), full: fmt(k.total) });
+  if (k.top) tiles.push({ label: "Top · " + k.top.name, value: fmtCompact(k.top.value), full: fmt(k.top.value), target: k.top.name });
+  if (k.bottom) tiles.push({ label: "Lowest · " + k.bottom.name, value: fmtCompact(k.bottom.value), full: fmt(k.bottom.value), target: k.bottom.name });
+  if (k.average !== undefined) tiles.push({ label: "Average", value: fmtCompact(k.average), full: fmt(k.average) });
   if (k.period_growth_pct !== undefined) tiles.push({ label: "Period Growth", value: k.period_growth_pct + "%", neg: k.period_growth_pct < 0 });
-  if (data.forecast && data.forecast.available) tiles.push({ label: "Forecast · next", value: fmt(data.forecast.next_value) });
+  if (data.forecast && data.forecast.available) tiles.push({ label: "Forecast · next", value: fmtCompact(data.forecast.next_value), full: fmt(data.forecast.next_value) });
 
   if (tiles.length) {
     const strip = card("Key Metrics", '<div class="kpis"></div>', next());
@@ -514,7 +523,8 @@ function render(data) {
     tiles.forEach(t => {
       const tile = document.createElement("div");
       tile.className = "kpi" + (t.target ? " interactive" : "");
-      tile.innerHTML = `<div class="label">${t.label}</div><div class="value${t.neg ? " neg" : ""}">${t.value}</div>` +
+      tile.innerHTML = `<div class="label">${t.label}</div>` +
+        `<div class="value${t.neg ? " neg" : ""}"${t.full ? ` title="${t.full}"` : ""}>${t.value}</div>` +
         (t.target ? '<div class="kpi-hint">Filter data →</div>' : "");
       if (t.target) tile.onclick = () => {
         grid.querySelectorAll(".kpi").forEach(x => x.classList.remove("active"));

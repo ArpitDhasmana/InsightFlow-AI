@@ -37,7 +37,7 @@ Question → SQL → Analytics → Forecast → Visualization → Executive
 | **Executive** | Writes the executive summary and recommendations |
 
 The system runs **without any LLM key** using deterministic heuristics, and
-automatically upgrades to LLM-powered reasoning when `OPENAI_API_KEY` is set.
+automatically upgrades to LLM-powered reasoning when `GEMINI_API_KEY` is set.
 
 ## Quick start
 
@@ -66,8 +66,9 @@ Copy `.env.example` to `.env` and adjust:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `DATABASE_URL` | `sqlite:///./insightflow.db` | Any SQLAlchemy URL (e.g. PostgreSQL) |
-| `OPENAI_API_KEY` | _(empty)_ | Enables LLM-powered agents |
-| `OPENAI_MODEL` | `gpt-4o-mini` | Chat model used when a key is set |
+| `GEMINI_API_KEY` | _(empty)_ | Enables LLM-powered agents (Google Gemini) |
+| `GEMINI_MODEL` | `gemini-2.5-flash-lite` | Primary Gemini model |
+| `GEMINI_FALLBACK_MODEL` | `gemini-2.5-flash` | Used automatically if the primary fails |
 
 ## Project layout
 

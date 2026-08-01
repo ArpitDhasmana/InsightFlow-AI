@@ -10,15 +10,16 @@ _DEFAULT_DB = f"sqlite:///{(_PROJECT_ROOT / 'insightflow.db').as_posix()}"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=str(_PROJECT_ROOT / ".env"), extra="ignore")
 
     database_url: str = _DEFAULT_DB
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o-mini"
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.5-flash-lite"
+    gemini_fallback_model: str = "gemini-2.5-flash"
 
     @property
     def llm_enabled(self) -> bool:
-        return bool(self.openai_api_key.strip())
+        return bool(self.gemini_api_key.strip())
 
 
 settings = Settings()

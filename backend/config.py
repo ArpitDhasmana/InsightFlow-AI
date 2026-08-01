@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-2.5-flash-lite"
     gemini_fallback_model: str = "gemini-2.5-flash"
+    # Month (1-12) the fiscal year starts on. 4 = April (Apr–Mar), 1 = calendar year.
+    fiscal_year_start_month: int = 4
 
     @property
     def llm_enabled(self) -> bool:

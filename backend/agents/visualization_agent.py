@@ -5,6 +5,7 @@ based on the intent and retrieved rows. Returns KPI cards plus a primary chart.
 """
 from __future__ import annotations
 
+from .constants import TIME_DIMENSIONS
 from .state import PipelineState
 
 
@@ -54,13 +55,13 @@ def run(state: PipelineState) -> PipelineState:
         }
     )
 
-    if rows and value_key:
+    if rows and value_key and dimension:
         label_key = next((k for k, v in rows[0].items() if isinstance(v, str)), None)
         labels = [str(r.get(label_key, i)) for i, r in enumerate(rows)]
         data = [round(float(r[value_key]), 2) for r in rows]
-        dim_title = (dimension or "group").title()
+        dim_title = (dimension or "group").replace("_", " ").title()
 
-        if dimension in ("month", "quarter"):
+        if dimension in TIME_DIMENSIONS:
             series = [{"name": metric, "data": data}]
             if forecast.get("available"):
                 proj = forecast["projection"]

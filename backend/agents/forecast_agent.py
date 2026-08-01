@@ -6,6 +6,7 @@ trend over time; otherwise returns an empty forecast.
 """
 from __future__ import annotations
 
+from .constants import FORECAST_DIMENSIONS
 from .state import PipelineState
 
 
@@ -27,7 +28,7 @@ def run(state: PipelineState) -> PipelineState:
     rows = state.get("rows", [])
     kpis = state.get("kpis", {})
     value_key = kpis.get("value_key")
-    is_trend = state["intent"].get("dimension") in ("month", "quarter")
+    is_trend = state["intent"].get("dimension") in FORECAST_DIMENSIONS
 
     if not is_trend or not value_key or len(rows) < 3:
         state["forecast"] = {"available": False}

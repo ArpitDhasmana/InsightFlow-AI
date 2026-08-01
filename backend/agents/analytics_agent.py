@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from statistics import mean, pstdev
 
+from .constants import TIME_DIMENSIONS
 from .state import PipelineState
 
 
@@ -63,8 +64,8 @@ def run(state: PipelineState) -> PipelineState:
                     anomalies.append({"name": r[label_key], "value": round(float(r[value_key]), 2), "z_score": round(z, 2)})
         kpis["anomalies"] = anomalies
 
-        # Growth for time-series (month/quarter dimensions are chronologically ordered).
-        if state["intent"].get("dimension") in ("month", "quarter") and values[0] != 0:
+        # Growth for time-series (chronologically ordered) dimensions.
+        if state["intent"].get("dimension") in TIME_DIMENSIONS and values[0] != 0:
             growth = (values[-1] - values[0]) / abs(values[0]) * 100
             kpis["period_growth_pct"] = round(growth, 1)
             mom = [
@@ -74,6 +75,10 @@ def run(state: PipelineState) -> PipelineState:
             ]
             if mom:
                 kpis["avg_mom_growth_pct"] = round(mean(mom), 1)
+
+    # Summing percentages across groups is meaningless; average is the headline.
+    if metric == "margin" and len(values) > 1:
+        kpis.pop("total", None)
 
     state["kpis"] = kpis
     return state

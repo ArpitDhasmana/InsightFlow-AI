@@ -388,8 +388,6 @@ function render(data) {
       "<tr>" + cols.map(c => `<td>${typeof r[c] === "number" ? fmt(r[c]) : r[c]}</td>`).join("") + "</tr>").join("");
     results.appendChild(card("Data", `<table>${head}${body}</table>`, next()));
   }
-
-  results.appendChild(card("Generated SQL", `<pre class="sql">${data.sql}</pre>`, next()));
 }
 </script>
 </body>

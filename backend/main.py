@@ -45,7 +45,6 @@ def ask(req: AskRequest, session: Session = Depends(get_session)) -> AskResponse
     return AskResponse(
         question=state["question"],
         intent=state["intent"],
-        sql=state.get("sql", ""),
         rows=state.get("rows", []),
         kpis=state.get("kpis", {}),
         forecast=state.get("forecast", {}),

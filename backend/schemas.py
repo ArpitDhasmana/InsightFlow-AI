@@ -27,7 +27,6 @@ class ChartSpec(BaseModel):
 class AskResponse(BaseModel):
     question: str
     intent: Intent
-    sql: str
     rows: list[dict[str, Any]]
     kpis: dict[str, Any]
     forecast: dict[str, Any]

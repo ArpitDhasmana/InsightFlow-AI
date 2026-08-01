@@ -8,6 +8,31 @@ from __future__ import annotations
 from .state import PipelineState
 
 
+def _next_month_labels(last: str, n: int) -> list[str]:
+    year, month = (int(x) for x in last.split("-"))
+    out = []
+    for _ in range(n):
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+        out.append(f"{year:04d}-{month:02d}")
+    return out
+
+
+def _next_quarter_labels(last: str, n: int) -> list[str]:
+    year_s, q_s = last.split("-Q")
+    year, q = int(year_s), int(q_s)
+    out = []
+    for _ in range(n):
+        q += 1
+        if q > 4:
+            q = 1
+            year += 1
+        out.append(f"{year}-Q{q}")
+    return out
+
+
 def run(state: PipelineState) -> PipelineState:
     rows = state.get("rows", [])
     intent = state["intent"]
@@ -35,11 +60,13 @@ def run(state: PipelineState) -> PipelineState:
         data = [round(float(r[value_key]), 2) for r in rows]
         dim_title = (dimension or "group").title()
 
-        if dimension == "month":
+        if dimension in ("month", "quarter"):
             series = [{"name": metric, "data": data}]
             if forecast.get("available"):
                 proj = forecast["projection"]
-                labels = labels + [f"+{i+1}m" for i in range(len(proj))]
+                last = labels[-1]
+                future = _next_quarter_labels(last, len(proj)) if dimension == "quarter" else _next_month_labels(last, len(proj))
+                labels = labels + future
                 series[0]["data"] = data + [None] * len(proj)
                 series.append({"name": "forecast", "data": [None] * len(data) + proj})
             charts.append({"type": "line", "title": f"{metric.title()} Trend", "labels": labels, "series": series})

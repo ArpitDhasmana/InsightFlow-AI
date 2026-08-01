@@ -63,8 +63,8 @@ def run(state: PipelineState) -> PipelineState:
                     anomalies.append({"name": r[label_key], "value": round(float(r[value_key]), 2), "z_score": round(z, 2)})
         kpis["anomalies"] = anomalies
 
-        # Growth for time-series (month dimension is already chronologically ordered).
-        if state["intent"].get("dimension") == "month" and values[0] != 0:
+        # Growth for time-series (month/quarter dimensions are chronologically ordered).
+        if state["intent"].get("dimension") in ("month", "quarter") and values[0] != 0:
             growth = (values[-1] - values[0]) / abs(values[0]) * 100
             kpis["period_growth_pct"] = round(growth, 1)
             mom = [

@@ -61,7 +61,7 @@ def _heuristic(state: PipelineState) -> tuple[str, list[str]]:
     if forecast.get("available"):
         direction = forecast["direction"]
         nxt = forecast["next_value"]
-        parts.append(f"The 3-month forecast trends {direction}, with next period projected at {_money(nxt)}.")
+        parts.append(f"The near-term forecast trends {direction}, with the next period projected at {_money(nxt)}.")
         if direction == "down":
             recs.append("Forecast is declining — accelerate pipeline and retention initiatives now to reverse the trend.")
         elif direction == "up":

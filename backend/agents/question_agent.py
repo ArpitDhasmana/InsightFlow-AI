@@ -21,6 +21,7 @@ DIMENSIONS = {
     "category": ["category", "product type"],
     "product": ["product", "sku", "item"],
     "segment": ["segment", "customer type", "tier"],
+    "quarter": ["quarter", "quarterly", "by quarter", "qoq", "q/q"],
     "month": ["month", "monthly", "trend", "over time", "by month"],
 }
 PERIODS = {
@@ -33,9 +34,11 @@ PERIODS = {
 SYSTEM = (
     "You are an intent parser for a business intelligence system. "
     "Return JSON with keys: metric (revenue|profit|quantity|orders|aov), "
-    "dimension (region|category|product|segment|month|null), "
+    "dimension (region|category|product|segment|quarter|month|null), "
     "time_period (last_month|last_quarter|last_year|all_time), "
-    "intent_type (aggregate|trend|comparison|ranking)."
+    "intent_type (aggregate|trend|comparison|ranking). "
+    "Use dimension 'quarter' when the user asks for quarterly figures, and "
+    "'month' for monthly or over-time trends."
 )
 
 
@@ -54,10 +57,13 @@ def _heuristic(question: str) -> dict:
 
     if any(w in q for w in ["trend", "over time", "monthly", "by month", "growth"]):
         intent_type = "trend"
-        dimension = "month"
+        if dimension not in ("month", "quarter"):
+            dimension = "month"
     elif any(w in q for w in ["top", "best", "worst", "rank", "highest", "lowest"]):
         intent_type = "ranking"
-    elif dimension and dimension != "month":
+    elif dimension in ("month", "quarter"):
+        intent_type = "trend"
+    elif dimension:
         intent_type = "comparison"
     else:
         intent_type = "aggregate"

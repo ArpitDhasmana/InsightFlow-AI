@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-from sqlalchemy import Float, func, select
+from sqlalchemy import Float, Integer, String, cast, func, select
 from sqlalchemy.orm import Session
 
 from ..models import Customer, Product, Sale
@@ -64,6 +64,7 @@ def _describe_sql(metric: str, dimension: str | None, start: date | None) -> str
         "product": "p.product_name",
         "segment": "c.segment",
         "month": "strftime('%Y-%m', s.date)",
+        "quarter": "strftime('%Y', s.date) || '-Q' || ((strftime('%m', s.date) + 2) / 3)",
     }.get(dimension or "")
 
     joins = ""
@@ -74,7 +75,7 @@ def _describe_sql(metric: str, dimension: str | None, start: date | None) -> str
 
     where = f"\n  WHERE s.date >= '{start.isoformat()}'" if start else ""
     if group_col:
-        order = f"{group_col}" if dimension == "month" else f"{label} DESC"
+        order = f"{group_col}" if dimension in ("month", "quarter") else f"{label} DESC"
         return (
             f"SELECT {group_col} AS {dimension}, {agg} AS {label}\n"
             f"  FROM sales s{joins}{where}\n"
@@ -111,13 +112,25 @@ def run(state: PipelineState, session: Session) -> PipelineState:
         # Exclude the current, still-incomplete month so trends/growth aren't skewed.
         first_of_month = date.today().replace(day=1)
         stmt = stmt.where(Sale.date < first_of_month)
+    elif dimension == "quarter":
+        # e.g. '2025-Q2'. (month + 2) / 3 maps months to quarter numbers; the outer
+        # cast forces integer truncation (SQLAlchemy's '/' otherwise yields a float).
+        qnum = cast((cast(func.strftime("%m", Sale.date), Integer) + 2) / 3, Integer)
+        quarter = (
+            func.strftime("%Y", Sale.date).op("||")("-Q").op("||")(cast(qnum, String))
+        ).label("quarter")
+        stmt = select(quarter, metric_expr).group_by(quarter).order_by(quarter)
+        # Exclude the current, still-incomplete quarter.
+        today = date.today()
+        q_start = date(today.year, ((today.month - 1) // 3) * 3 + 1, 1)
+        stmt = stmt.where(Sale.date < q_start)
     else:
         stmt = select(metric_expr)
 
     if start is not None:
         stmt = stmt.where(Sale.date >= start)
 
-    if dimension and dimension != "month":
+    if dimension and dimension not in ("month", "quarter"):
         stmt = stmt.order_by(metric_expr.desc())
 
     result = session.execute(stmt).mappings().all()

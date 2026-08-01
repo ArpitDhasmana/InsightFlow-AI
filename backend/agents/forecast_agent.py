@@ -27,7 +27,7 @@ def run(state: PipelineState) -> PipelineState:
     rows = state.get("rows", [])
     kpis = state.get("kpis", {})
     value_key = kpis.get("value_key")
-    is_trend = state["intent"].get("dimension") == "month"
+    is_trend = state["intent"].get("dimension") in ("month", "quarter")
 
     if not is_trend or not value_key or len(rows) < 3:
         state["forecast"] = {"available": False}

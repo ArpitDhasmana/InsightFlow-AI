@@ -17,8 +17,9 @@ def run(state: PipelineState) -> PipelineState:
 
     value_key = kpis.get("value_key")
     metric = intent["metric"]
+    dimension = intent.get("dimension")
 
-    # KPI card.
+    # KPI marker (the frontend builds interactive KPI tiles from the kpis block).
     charts.append(
         {
             "type": "kpi",
@@ -32,25 +33,37 @@ def run(state: PipelineState) -> PipelineState:
         label_key = next((k for k, v in rows[0].items() if isinstance(v, str)), None)
         labels = [str(r.get(label_key, i)) for i, r in enumerate(rows)]
         data = [round(float(r[value_key]), 2) for r in rows]
+        dim_title = (dimension or "group").title()
 
-        if intent.get("dimension") == "month":
+        if dimension == "month":
             series = [{"name": metric, "data": data}]
             if forecast.get("available"):
-                pad = [None] * len(data)
                 proj = forecast["projection"]
                 labels = labels + [f"+{i+1}m" for i in range(len(proj))]
                 series[0]["data"] = data + [None] * len(proj)
-                series.append({"name": "forecast", "data": pad + proj})
+                series.append({"name": "forecast", "data": [None] * len(data) + proj})
             charts.append({"type": "line", "title": f"{metric.title()} Trend", "labels": labels, "series": series})
         else:
+            # Horizontal bar reads better for rankings; vertical bar for comparisons.
+            is_ranking = intent.get("intent_type") == "ranking"
             charts.append(
                 {
-                    "type": "bar",
-                    "title": f"{metric.title()} by {intent.get('dimension', 'group').title()}",
+                    "type": "hbar" if is_ranking else "bar",
+                    "title": f"{metric.title()} by {dim_title}",
                     "labels": labels,
                     "series": [{"name": metric, "data": data}],
                 }
             )
+            # A share/composition view makes sense for a small number of categories.
+            if 2 <= len(rows) <= 8:
+                charts.append(
+                    {
+                        "type": "doughnut",
+                        "title": f"{metric.title()} Share by {dim_title}",
+                        "labels": labels,
+                        "series": [{"name": metric, "data": data}],
+                    }
+                )
 
     state["charts"] = charts
     return state

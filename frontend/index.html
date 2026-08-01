@@ -164,12 +164,18 @@
     font-weight: 400;
   }
 
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1px; background: var(--line); border-radius: 12px; overflow: hidden; }
-  .kpi { padding: 20px; background: var(--card); }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .kpi {
+    padding: 16px 18px;
+    background: rgba(232,98,58,.06);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    transition: transform .15s ease-out, border-color .15s ease-out, background .15s ease-out;
+  }
   .kpi .label { font-size: 12px; color: var(--ink-soft); letter-spacing: .02em; }
   .kpi .value {
     font-family: "Space Grotesk", sans-serif;
-    font-size: 34px;
+    font-size: 32px;
     font-weight: 600;
     color: var(--accent);
     letter-spacing: -.02em;
@@ -177,6 +183,11 @@
     line-height: 1;
   }
   .kpi .value.neg { color: var(--accent-2); }
+  .kpi .kpi-hint { margin-top: 10px; font-size: 11px; color: var(--accent-2); opacity: 0; transition: opacity .15s ease-out; }
+  .kpi.interactive { cursor: pointer; }
+  .kpi.interactive:hover { transform: translateY(-3px); border-color: var(--accent); background: rgba(232,98,58,.12); }
+  .kpi.interactive:hover .kpi-hint, .kpi.active .kpi-hint { opacity: 1; }
+  .kpi.active { border-color: var(--accent); background: rgba(232,98,58,.16); }
 
   ul.recs { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
   ul.recs li { padding-left: 30px; position: relative; color: var(--ink); }
@@ -193,9 +204,36 @@
   }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { text-align: left; padding: 9px 12px; }
-  th { color: var(--ink-soft); font-weight: 500; border-bottom: 1px solid var(--line); text-transform: capitalize; }
+  th {
+    color: var(--ink-soft); font-weight: 500; border-bottom: 1px solid var(--line);
+    text-transform: capitalize; cursor: pointer; user-select: none; white-space: nowrap;
+    transition: color .15s ease-out;
+  }
+  th:hover { color: var(--ink); }
+  th .sort { color: var(--accent); }
   td { border-bottom: 1px solid rgba(77,44,33,.5); }
   td:last-child, th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.hl td { background: rgba(232,98,58,.12); }
+
+  .table-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .tbl-filter {
+    flex: 0 0 220px; background: var(--bg-2); border: 1px solid var(--line);
+    border-radius: 999px; padding: 8px 14px; color: var(--ink); font: inherit; font-size: 14px; outline: none;
+    transition: border-color .15s ease-out;
+  }
+  .tbl-filter:focus { border-color: var(--accent); }
+  .tbl-count { color: var(--ink-soft); font-size: 13px; margin-left: auto; }
+  .table-scroll { overflow-x: auto; }
+  .pager { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+  .pager button {
+    width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--line);
+    background: transparent; color: var(--ink); cursor: pointer; font-size: 16px; line-height: 1;
+    transition: border-color .15s ease-out, color .15s ease-out;
+  }
+  .pager button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .pager button:disabled { opacity: .35; cursor: default; }
+  .pg-info { color: var(--ink-soft); font-size: 13px; min-width: 60px; text-align: center; }
+  .chart-box { position: relative; height: 300px; }
 
   .empty, .error { color: var(--ink-soft); text-align: center; padding: 30px; }
   .error { color: #f0916a; }
@@ -267,6 +305,9 @@ goBtn.onclick = ask;
 input.addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
 
 let charts = [];
+let dataFilterApi = null;
+let highlightRow = null;
+const WARM = ["#e8623a", "#f0a074", "#c9542e", "#f4c9a8", "#a8431f", "#e9b892", "#d97a4a", "#8f3a1c"];
 function fmt(n) {
   if (typeof n !== "number") return n;
   return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -308,46 +349,146 @@ function card(title, bodyHtml, delay, cls) {
 }
 
 function chartCanvas(spec, delay) {
-  const c = card(spec.title, "<canvas></canvas>", delay);
+  const c = card(spec.title, '<div class="chart-box"><canvas></canvas></div>', delay);
   const ctx = c.querySelector("canvas");
+  const isLine = spec.type === "line";
+  const isHbar = spec.type === "hbar";
+  const isPie = spec.type === "doughnut" || spec.type === "pie";
+  const valTicks = { callback: v => fmt(v), color: "#bfa393" };
+
+  let scales = {};
+  if (!isPie) {
+    scales = isHbar
+      ? { x: { beginAtZero: true, grid: { color: "rgba(244,233,221,.06)" }, ticks: valTicks }, y: { grid: { display: false } } }
+      : { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: "rgba(244,233,221,.06)" }, ticks: valTicks } };
+  }
+
   charts.push(new Chart(ctx, {
-    type: spec.type === "line" ? "line" : "bar",
+    type: isLine ? "line" : (isPie ? "doughnut" : "bar"),
     data: {
       labels: spec.labels,
       datasets: spec.series.map((s) => {
-        const cream = "#f0d9c6";
-        const primary = spec.type === "line";
+        if (isPie) {
+          return {
+            label: s.name,
+            data: s.data,
+            backgroundColor: spec.labels.map((_, i) => WARM[i % WARM.length]),
+            borderColor: "#351b13",
+            borderWidth: 2,
+          };
+        }
         return {
           label: s.name,
           data: s.data,
-          borderColor: s.name === "forecast" ? "#f0a074" : (primary ? cream : "#e8623a"),
-          backgroundColor: primary ? "transparent" : "#e8623a",
+          borderColor: s.name === "forecast" ? "#f0a074" : (isLine ? "#f0d9c6" : "#e8623a"),
+          backgroundColor: isLine ? "transparent" : "#e8623a",
           borderDash: s.name === "forecast" ? [6, 5] : [],
           borderWidth: 2,
-          pointRadius: primary ? 0 : undefined,
+          pointRadius: isLine ? 0 : undefined,
           pointHoverRadius: 4,
           tension: 0.4,
           spanGaps: true,
-          borderRadius: primary ? 0 : 6,
+          borderRadius: isLine ? 0 : 6,
           maxBarThickness: 46,
         };
       }),
     },
     options: {
+      indexAxis: isHbar ? "y" : "x",
       responsive: true,
-      plugins: { legend: { display: spec.series.length > 1, labels: { boxWidth: 12, boxHeight: 12 } } },
-      scales: {
-        y: { beginAtZero: true, grid: { color: "rgba(244,233,221,.06)" }, ticks: { callback: v => fmt(v) } },
-        x: { grid: { display: false } },
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: isPie || spec.series.length > 1,
+          position: isPie ? "right" : "top",
+          labels: { boxWidth: 12, boxHeight: 12 },
+        },
       },
+      scales,
     },
   }));
+  return c;
+}
+
+function buildDataCard(rows, delay) {
+  const cols = Object.keys(rows[0]);
+  const labelKey = cols.find(c => typeof rows[0][c] === "string");
+  const valueKey = cols.find(c => typeof rows[0][c] === "number");
+  const state = { filter: "", sortCol: valueKey || cols[0], sortDir: "desc", page: 0, pageSize: 8 };
+
+  const c = card("Data",
+    '<div class="table-toolbar">' +
+      '<input class="tbl-filter" type="text" placeholder="Filter rows…" />' +
+      '<span class="tbl-count"></span>' +
+    '</div>' +
+    '<div class="table-scroll"><table><thead></thead><tbody></tbody></table></div>' +
+    '<div class="pager"><button class="pg-prev" aria-label="Previous page">‹</button>' +
+      '<span class="pg-info"></span>' +
+      '<button class="pg-next" aria-label="Next page">›</button></div>', delay);
+
+  const filterEl = c.querySelector(".tbl-filter");
+  const countEl = c.querySelector(".tbl-count");
+  const thead = c.querySelector("thead");
+  const tbody = c.querySelector("tbody");
+  const info = c.querySelector(".pg-info");
+  const prev = c.querySelector(".pg-prev");
+  const nextBtn = c.querySelector(".pg-next");
+
+  thead.innerHTML = "<tr>" + cols.map(col => `<th data-col="${col}">${col}<span class="sort"></span></th>`).join("") + "</tr>";
+
+  function view() {
+    let r = rows;
+    if (state.filter) {
+      const f = state.filter.toLowerCase();
+      r = r.filter(row => cols.some(col => String(row[col]).toLowerCase().includes(f)));
+    }
+    return [...r].sort((a, b) => {
+      const av = a[state.sortCol], bv = b[state.sortCol];
+      const cmp = (typeof av === "number" && typeof bv === "number") ? av - bv : String(av).localeCompare(String(bv));
+      return state.sortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  function renderBody() {
+    const r = view();
+    const pages = Math.max(1, Math.ceil(r.length / state.pageSize));
+    if (state.page >= pages) state.page = pages - 1;
+    const start = state.page * state.pageSize;
+    const slice = r.slice(start, start + state.pageSize);
+    tbody.innerHTML = slice.length
+      ? slice.map(row => `<tr${row[labelKey] === highlightRow ? ' class="hl"' : ""}>` +
+          cols.map(col => `<td>${typeof row[col] === "number" ? fmt(row[col]) : row[col]}</td>`).join("") + "</tr>").join("")
+      : `<tr><td colspan="${cols.length}" class="empty">No matching rows</td></tr>`;
+    countEl.textContent = `${r.length} row${r.length !== 1 ? "s" : ""}`;
+    info.textContent = `${state.page + 1} / ${pages}`;
+    prev.disabled = state.page === 0;
+    nextBtn.disabled = state.page >= pages - 1;
+    thead.querySelectorAll("th").forEach(th => {
+      th.querySelector(".sort").textContent = th.dataset.col === state.sortCol ? (state.sortDir === "asc" ? " ↑" : " ↓") : "";
+    });
+  }
+
+  filterEl.addEventListener("input", () => { state.filter = filterEl.value; state.page = 0; renderBody(); });
+  prev.onclick = () => { if (state.page > 0) { state.page--; renderBody(); } };
+  nextBtn.onclick = () => { state.page++; renderBody(); };
+  thead.querySelectorAll("th").forEach(th => th.onclick = () => {
+    const col = th.dataset.col;
+    if (state.sortCol === col) state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+    else { state.sortCol = col; state.sortDir = "desc"; }
+    state.page = 0;
+    renderBody();
+  });
+
+  dataFilterApi = { setFilter: (v) => { state.filter = v; filterEl.value = v; state.page = 0; renderBody(); } };
+  renderBody();
   return c;
 }
 
 function render(data) {
   charts.forEach(c => c.destroy());
   charts = [];
+  dataFilterApi = null;
+  highlightRow = null;
   const results = document.getElementById("results");
   results.innerHTML = "";
   let step = 0;
@@ -356,25 +497,38 @@ function render(data) {
   results.appendChild(card("Executive Summary", `<div class="summary">${data.executive_summary}</div>`, next()));
 
   const k = data.kpis || {};
-  const cards = [];
-  if (k.total !== undefined) cards.push(["Total " + (k.metric || ""), fmt(k.total), false]);
-  if (k.top) cards.push(["Top · " + k.top.name, fmt(k.top.value), false]);
-  if (k.average !== undefined) cards.push(["Average", fmt(k.average), false]);
-  if (k.period_growth_pct !== undefined) cards.push(["Period Growth", k.period_growth_pct + "%", k.period_growth_pct < 0]);
-  if (data.forecast && data.forecast.available) cards.push(["Forecast · next", fmt(data.forecast.next_value), false]);
+  const tiles = [];
+  if (k.total !== undefined) tiles.push({ label: "Total " + (k.metric || ""), value: fmt(k.total) });
+  if (k.top) tiles.push({ label: "Top · " + k.top.name, value: fmt(k.top.value), target: k.top.name });
+  if (k.bottom) tiles.push({ label: "Lowest · " + k.bottom.name, value: fmt(k.bottom.value), target: k.bottom.name });
+  if (k.average !== undefined) tiles.push({ label: "Average", value: fmt(k.average) });
+  if (k.period_growth_pct !== undefined) tiles.push({ label: "Period Growth", value: k.period_growth_pct + "%", neg: k.period_growth_pct < 0 });
+  if (data.forecast && data.forecast.available) tiles.push({ label: "Forecast · next", value: fmt(data.forecast.next_value) });
 
-  const grid = document.createElement("div");
-  grid.className = "grid-2";
-  if (cards.length) {
-    const html = '<div class="kpis">' + cards.map(([l, v, neg]) =>
-      `<div class="kpi"><div class="label">${l}</div><div class="value${neg ? " neg" : ""}">${v}</div></div>`).join("") + "</div>";
-    grid.appendChild(card("Key Metrics", html, next()));
+  if (tiles.length) {
+    const strip = card("Key Metrics", '<div class="kpis"></div>', next());
+    const grid = strip.querySelector(".kpis");
+    tiles.forEach(t => {
+      const tile = document.createElement("div");
+      tile.className = "kpi" + (t.target ? " interactive" : "");
+      tile.innerHTML = `<div class="label">${t.label}</div><div class="value${t.neg ? " neg" : ""}">${t.value}</div>` +
+        (t.target ? '<div class="kpi-hint">Filter data →</div>' : "");
+      if (t.target) tile.onclick = () => {
+        grid.querySelectorAll(".kpi").forEach(x => x.classList.remove("active"));
+        tile.classList.add("active");
+        highlightRow = t.target;
+        if (dataFilterApi) dataFilterApi.setFilter(t.target);
+        document.querySelector(".table-scroll")?.closest(".card")?.scrollIntoView({ block: "center", behavior: "smooth" });
+      };
+      grid.appendChild(tile);
+    });
+    results.appendChild(strip);
   }
+
   if (data.recommendations && data.recommendations.length) {
     const html = '<ul class="recs">' + data.recommendations.map(r => `<li>${r}</li>`).join("") + "</ul>";
-    grid.appendChild(card("Recommendations", html, next()));
+    results.appendChild(card("Recommendations", html, next()));
   }
-  if (grid.children.length) results.appendChild(grid);
 
   (data.charts || []).forEach(spec => {
     if (spec.type === "kpi") return;
@@ -382,11 +536,7 @@ function render(data) {
   });
 
   if (data.rows && data.rows.length) {
-    const cols = Object.keys(data.rows[0]);
-    const head = "<tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr>";
-    const body = data.rows.slice(0, 12).map(r =>
-      "<tr>" + cols.map(c => `<td>${typeof r[c] === "number" ? fmt(r[c]) : r[c]}</td>`).join("") + "</tr>").join("");
-    results.appendChild(card("Data", `<table>${head}${body}</table>`, next()));
+    results.appendChild(buildDataCard(data.rows, next()));
   }
 }
 </script>

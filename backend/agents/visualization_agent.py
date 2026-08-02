@@ -44,6 +44,7 @@ def run(state: PipelineState) -> PipelineState:
     value_key = kpis.get("value_key")
     metric = intent["metric"]
     dimension = intent.get("dimension")
+    breakdown = intent.get("breakdown")
 
     # KPI marker (the frontend builds interactive KPI tiles from the kpis block).
     charts.append(
@@ -54,6 +55,29 @@ def run(state: PipelineState) -> PipelineState:
             "series": [{"name": metric, "data": [kpis.get("total", 0)]}],
         }
     )
+
+    if rows and value_key and breakdown:
+        # Pivot: one series per primary entity, plotted across the time breakdown.
+        dim_title = dimension.replace("_", " ").title()
+        bd_title = breakdown.replace("_", " ").title()
+        bvals = sorted({str(r[breakdown]) for r in rows})
+        pvals: list[str] = []
+        for r in rows:
+            p = str(r[dimension])
+            if p not in pvals:
+                pvals.append(p)
+        lookup = {(str(r[dimension]), str(r[breakdown])): round(float(r[value_key]), 2) for r in rows}
+        series = [{"name": p, "data": [lookup.get((p, b)) for b in bvals]} for p in pvals]
+        charts.append(
+            {
+                "type": "line" if breakdown in TIME_DIMENSIONS else "bar",
+                "title": f"{metric.title()} — {dim_title} across {bd_title}",
+                "labels": bvals,
+                "series": series,
+            }
+        )
+        state["charts"] = charts
+        return state
 
     if rows and value_key and dimension:
         label_key = next((k for k, v in rows[0].items() if isinstance(v, str)), None)

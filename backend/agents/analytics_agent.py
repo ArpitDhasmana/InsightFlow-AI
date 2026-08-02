@@ -44,6 +44,11 @@ def run(state: PipelineState) -> PipelineState:
     kpis["total"] = total
     kpis["value_key"] = value_key
 
+    # A two-dimensional pivot has no single ranking; report the total only.
+    if state["intent"].get("breakdown"):
+        state["kpis"] = {"metric": metric, "total": total, "value_key": value_key}
+        return state
+
     if label_key and len(rows) >= 2:
         ranked = sorted(rows, key=lambda r: float(r[value_key]), reverse=True)
         top = ranked[0]

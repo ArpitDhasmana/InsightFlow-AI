@@ -184,13 +184,62 @@ def _grouping(dimension: str | None):
     return None, None, None
 
 
+def _run_pivot(state, session, metric, metric_expr, dimension, breakdown, start, end, intent):
+    """Two-dimensional query: a categorical primary broken down across a time secondary."""
+    g1, j1, _ = _grouping(dimension)
+    g2, j2, o2 = _grouping(breakdown)
+    if g1 is None or g2 is None:
+        state["rows"] = []
+        return state
+
+    stmt = select(g1, g2, metric_expr)
+    joins = {}
+    for j in (j1, j2):
+        if j is not None:
+            joins[j[0]] = j[1]
+    for tbl, cond in joins.items():
+        stmt = stmt.join(tbl, cond)
+    if start is not None:
+        stmt = stmt.where(Sale.date >= start)
+    if end is not None:
+        stmt = stmt.where(Sale.date < end)
+    stmt = stmt.group_by(g1, g2).order_by(g1, o2 if o2 is not None else metric_expr.desc())
+
+    rows = [dict(r) for r in session.execute(stmt).mappings().all()]
+    for row in rows:
+        for k, v in row.items():
+            if isinstance(v, float):
+                row[k] = round(v, 2)
+
+    dim_key, val_key = dimension, _METRIC_LABEL[metric]
+    # "Top/bottom N" limits the primary entities by their overall total.
+    limit = intent.get("limit")
+    if isinstance(limit, int) and limit > 0 and dimension not in TIME_DIMENSIONS:
+        totals: dict = {}
+        for r in rows:
+            totals[r[dim_key]] = totals.get(r[dim_key], 0) + float(r[val_key])
+        ranked = sorted(totals, key=lambda k: totals[k], reverse=not intent.get("ascending"))
+        keep = set(ranked[:limit])
+        rows = [r for r in rows if r[dim_key] in keep]
+
+    state["rows"] = rows
+    return state
+
+
 def run(state: PipelineState, session: Session) -> PipelineState:
     intent = state["intent"]
     metric = intent["metric"] if intent.get("metric") in _METRIC_LABEL else "revenue"
     dimension = intent.get("dimension")
+    breakdown = intent.get("breakdown")
+    if breakdown == dimension:
+        breakdown = None
     start, end = _resolve_period(intent.get("time_period"))
 
     metric_expr = _metric_expr(metric).label(_METRIC_LABEL[metric])
+
+    if breakdown:
+        return _run_pivot(state, session, metric, metric_expr, dimension, breakdown, start, end, intent)
+
     group, join, order_expr = _grouping(dimension)
 
     if group is None:

@@ -39,6 +39,20 @@ def _heuristic(state: PipelineState) -> tuple[str, list[str]]:
     is_margin = metric == "margin"
     total = kpis.get("total")
 
+    # Two-dimensional pivot: a simple comparison narrative.
+    if intent.get("breakdown"):
+        dim = intent["dimension"].replace("_", " ")
+        bd = intent["breakdown"].replace("_", " ")
+        summary = (
+            f"Comparing {metric} by {dim} across each {bd}. "
+            f"Total {metric} over the selected scope is {_fmt(metric, total or 0)}. "
+            f"Use the chart to spot which {dim} is gaining or losing share over time."
+        )
+        return summary, [
+            f"Watch for a {dim} whose {metric} is trending down across {bd}s and address it early.",
+            f"Double down on the {dim} showing the strongest, most consistent growth.",
+        ]
+
     parts: list[str] = []
     if is_margin:
         headline = kpis.get("average", total)
@@ -96,6 +110,13 @@ def _heuristic(state: PipelineState) -> tuple[str, list[str]]:
 
 
 def run(state: PipelineState) -> PipelineState:
+    # Pivots are summarized deterministically (the LLM only sees a single total).
+    if state["intent"].get("breakdown"):
+        summary, recs = _heuristic(state)
+        state["executive_summary"] = summary
+        state["recommendations"] = recs
+        return state
+
     payload = {
         "question": state["question"],
         "intent": state["intent"],

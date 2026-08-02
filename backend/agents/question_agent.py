@@ -64,7 +64,10 @@ SYSTEM = (
     "'year:YYYY', 'quarter:YYYY-Qn', 'fy:YYYY'.\n"
     "- intent_type: aggregate|trend|comparison|ranking\n"
     "- limit: for 'top N' / 'bottom N' questions, the integer N; otherwise null\n"
-    "Rules: use dimension 'day' for day-by-day within a month (also set "
+    "- breakdown: an optional SECOND grouping — a TIME dimension (year|"
+    "fiscal_year|quarter|month|week|day) to pivot the primary dimension across, "
+    "or null. Use it for 'X by <time>' with two groupings, e.g. 'top products by "
+    "fiscal year' -> dimension:product, breakdown:fiscal_year.\n"    "Rules: use dimension 'day' for day-by-day within a month (also set "
     "time_period to that month), 'year' for yearly, 'fiscal_year' for financial "
     "years, 'week' for weekly, 'day_of_week' for weekday patterns. A specific "
     "period like 'in 2025' is a time_period (year:2025), not a dimension. "
@@ -162,26 +165,45 @@ def _parse_time(q: str) -> str:
 def _heuristic(question: str) -> dict:
     q = question.lower()
     metric = _match(METRICS, q, "revenue")
-    dimension = _match(DIMENSIONS, q, None)
     time_period = _parse_time(q)
 
-    # 'fy', 'fy25', 'fiscal year' describe the fiscal-year grouping only when no
-    # other dimension was named (otherwise the FY is just a filter, e.g. products
-    # in FY2026) and no specific month within the FY was requested.
+    # Collect every dimension mentioned so a categorical primary can be paired
+    # with a time secondary for a two-dimensional "X by <time>" pivot.
+    dims = [k for k, words in DIMENSIONS.items() if any(w in q for w in words)]
     is_fy = "fiscal" in q or "financial year" in q or re.search(r"\bfy\s?\d{2,4}\b", q)
-    if is_fy and dimension is None and not time_period.startswith("month:"):
-        dimension = "fiscal_year"
+    specific_fy = time_period.startswith("fy:")
+    if is_fy and not time_period.startswith("month:"):
+        if [d for d in dims if d not in TIME_DIMENSIONS]:
+            # e.g. "products by fiscal year" -> pivot; but "products in FY2026" is a filter.
+            if not specific_fy:
+                dims.append("fiscal_year")
+        else:
+            wants_series = any(w in q for w in ["trend", "trends", "and", "vs", "versus", "compare", "each", "over"])
+            if not (specific_fy and not wants_series):
+                dims.append("fiscal_year")
+                if specific_fy:
+                    time_period = "all_time"
+
+    seen = set()
+    dims = [d for d in dims if not (d in seen or seen.add(d))]
+    categorical = [d for d in dims if d not in TIME_DIMENSIONS]
+    timedims = [d for d in dims if d in TIME_DIMENSIONS]
+    if categorical and timedims:
+        dimension, breakdown = categorical[0], timedims[0]
+    else:
+        dimension = dims[0] if dims else None
+        breakdown = None
 
     if any(w in q for w in ["top", "best", "worst", "rank", "highest", "lowest", "most", "least"]):
         intent_type = "ranking"
+    elif breakdown or (dimension and dimension not in TIME_DIMENSIONS):
+        intent_type = "comparison"
     elif dimension in TIME_DIMENSIONS:
         intent_type = "trend"
     elif any(w in q for w in ["trend", "over time", "growth"]):
         intent_type = "trend"
         if dimension is None:
             dimension = "month"
-    elif dimension:
-        intent_type = "comparison"
     else:
         intent_type = "aggregate"
 
@@ -191,6 +213,7 @@ def _heuristic(question: str) -> dict:
     return {
         "metric": metric,
         "dimension": dimension,
+        "breakdown": breakdown,
         "time_period": time_period,
         "intent_type": intent_type,
         "limit": limit,
@@ -205,9 +228,13 @@ def run(state: PipelineState) -> PipelineState:
         dim = parsed.get("dimension")
         if dim in ("null", "none", ""):
             dim = None
+        bd = parsed.get("breakdown")
+        if bd in ("null", "none", "") or bd == dim:
+            bd = None
         intent = {
             "metric": parsed.get("metric", "revenue"),
             "dimension": dim,
+            "breakdown": bd,
             "time_period": parsed.get("time_period") or "all_time",
             "intent_type": parsed.get("intent_type", "aggregate"),
             "limit": parsed.get("limit") if isinstance(parsed.get("limit"), int) else None,

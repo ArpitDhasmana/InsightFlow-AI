@@ -394,7 +394,8 @@ function chartCanvas(spec, delay) {
     type: isLine ? "line" : (isPie ? "doughnut" : "bar"),
     data: {
       labels: spec.labels,
-      datasets: spec.series.map((s) => {
+      // Multiple non-forecast series (a pivot) get distinct colors per series.
+      datasets: spec.series.map((s, i) => {
         if (isPie) {
           return {
             label: s.name,
@@ -404,11 +405,15 @@ function chartCanvas(spec, delay) {
             borderWidth: 2,
           };
         }
+        const multi = spec.series.length > 1 && !spec.series.some(x => x.name === "forecast");
+        const color = s.name === "forecast"
+          ? "#5eead4"
+          : (multi ? WARM[i % WARM.length] : (isLine ? "#cdd8e6" : "#2dd4bf"));
         return {
           label: s.name,
           data: s.data,
-          borderColor: s.name === "forecast" ? "#5eead4" : (isLine ? "#cdd8e6" : "#2dd4bf"),
-          backgroundColor: isLine ? "transparent" : "#2dd4bf",
+          borderColor: color,
+          backgroundColor: isLine ? "transparent" : color,
           borderDash: s.name === "forecast" ? [6, 5] : [],
           borderWidth: 2,
           pointRadius: isLine ? 0 : undefined,

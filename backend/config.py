@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     # Month (1-12) the fiscal year starts on. 7 = July (Jul–Jun, FY labelled by the
     # year it ends in, e.g. Jul 2024–Jun 2025 = FY2025). 1 = calendar year.
     fiscal_year_start_month: int = 7
+    # Comma-separated list of allowed browser origins (CORS). "*" allows any.
+    cors_origins: str = "*"
 
     @property
     def llm_enabled(self) -> bool:

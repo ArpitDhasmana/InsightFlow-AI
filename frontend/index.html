@@ -279,6 +279,10 @@ Chart.defaults.color = "#8a97a8";
 Chart.defaults.font.family = "'Space Grotesk', sans-serif";
 Chart.defaults.borderColor = "rgba(231,236,243,.06)";
 
+// API base: empty = same origin (works with the Netlify proxy). Set
+// window.__API_BASE__ to the Render URL to call the backend directly instead.
+const API_BASE = (window.__API_BASE__ || "").replace(/\/$/, "");
+
 const SAMPLES = [
   "Monthly revenue trend and forecast",
   "Revenue by region",
@@ -297,7 +301,7 @@ SAMPLES.forEach(s => {
   samplesEl.appendChild(b);
 });
 
-fetch("/health").then(r => r.json()).then(h => {
+fetch(API_BASE + "/health").then(r => r.json()).then(h => {
   const m = document.getElementById("mode");
   m.textContent = h.llm_powered ? "LLM-powered" : "Heuristic mode";
   if (!h.seeded) m.textContent = "DB not seeded";
@@ -333,7 +337,7 @@ async function ask() {
   const results = document.getElementById("results");
   results.innerHTML = '<div class="empty">Analyzing…</div>';
   try {
-    const res = await fetch("/api/ask", {
+    const res = await fetch(API_BASE + "/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question }),

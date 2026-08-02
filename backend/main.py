@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import inspect
@@ -20,7 +21,24 @@ app = FastAPI(
     version="1.0.0",
 )
 
+_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_origins or ["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+
+
+@app.on_event("startup")
+def _seed_if_empty() -> None:
+    """Auto-seed on first boot (e.g. Render's ephemeral disk starts empty)."""
+    if "sales" not in inspect(engine).get_table_names():
+        from .seed_data import seed
+
+        seed()
 
 
 @app.get("/health")

@@ -69,6 +69,33 @@ Copy `.env.example` to `.env` and adjust:
 | `GEMINI_API_KEY` | _(empty)_ | Enables LLM-powered agents (Google Gemini) |
 | `GEMINI_MODEL` | `gemini-2.5-flash-lite` | Primary Gemini model |
 | `GEMINI_FALLBACK_MODEL` | `gemini-2.5-flash` | Used automatically if the primary fails |
+| `CORS_ORIGINS` | `*` | Comma-separated allowed browser origins |
+
+## Deployment (Netlify + Render)
+
+The frontend deploys as a static site on **Netlify** and the API as a web
+service on **Render**. Netlify proxies `/api/*` and `/health` to Render, so the
+browser stays same-origin (no CORS needed).
+
+**Backend — Render**
+1. Push this repo to GitHub.
+2. In Render: **New +** → **Blueprint** → select the repo. It reads
+   [`render.yaml`](render.yaml) and provisions the service.
+3. Add the `GEMINI_API_KEY` value in the service's **Environment** tab.
+4. Note the service URL, e.g. `https://insightflow-api.onrender.com`.
+
+The database auto-seeds on first boot (Render's free disk is ephemeral, so it
+re-seeds on each deploy).
+
+**Frontend — Netlify**
+1. In [`netlify.toml`](netlify.toml), replace `INSIGHTFLOW_API_URL` with your
+   Render host (e.g. `insightflow-api.onrender.com`).
+2. In Netlify: **Add new site** → **Import from Git** → select the repo.
+   Publish directory is `frontend` (already set in `netlify.toml`).
+3. Deploy. The site calls the backend through the Netlify proxy.
+
+> Not using the proxy? Set `window.__API_BASE__` to the Render URL in
+> `frontend/index.html` and set `CORS_ORIGINS` on Render to your Netlify origin.
 
 ## Project layout
 

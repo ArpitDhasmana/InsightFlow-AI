@@ -1,0 +1,25 @@
+# Render blueprint for the InsightFlow AI backend (FastAPI).
+# Deploy: push to GitHub, then in Render "New +" → "Blueprint" and pick this repo.
+services:
+  - type: web
+    name: insightflow-api
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      # Set this secret in the Render dashboard (do not commit it).
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash-lite
+      - key: GEMINI_FALLBACK_MODEL
+        value: gemini-2.5-flash
+      # Lock this down to your Netlify origin in production, e.g.
+      # https://your-site.netlify.app
+      - key: CORS_ORIGINS
+        value: "*"

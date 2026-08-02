@@ -429,11 +429,31 @@ function chartCanvas(spec, delay) {
       indexAxis: isHbar ? "y" : "x",
       responsive: true,
       maintainAspectRatio: false,
+      interaction: isPie ? { mode: "nearest", intersect: true } : { mode: "index", intersect: false },
       plugins: {
         legend: {
           display: isPie || spec.series.length > 1,
           position: isPie ? "right" : "top",
           labels: { boxWidth: 12, boxHeight: 12 },
+        },
+        tooltip: {
+          backgroundColor: "rgba(20,26,34,.96)",
+          borderColor: "rgba(231,236,243,.14)",
+          borderWidth: 1,
+          titleColor: "#e7ecf3",
+          bodyColor: "#c7d0dc",
+          padding: 12,
+          cornerRadius: 10,
+          displayColors: !isPie,
+          callbacks: {
+            label: (ctx) => {
+              const raw = ctx.parsed;
+              const v = typeof raw === "number" ? raw : (raw.y != null ? raw.y : raw.x);
+              if (v == null) return null;
+              const name = isPie ? ctx.label : ctx.dataset.label;
+              return "  " + name + ": " + fmt(v);
+            },
+          },
         },
       },
       scales,

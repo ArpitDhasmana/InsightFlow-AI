@@ -1,9 +1,10 @@
 # Netlify config for the InsightFlow AI frontend (static site).
-# Publishes the frontend/ folder and proxies API calls to the Render backend so
-# the browser stays same-origin (no CORS needed).
+# base = frontend so Netlify never sees the backend's requirements.txt and skips
+# any Python build; the API is proxied to the Render backend (same-origin).
 
 [build]
-  publish = "frontend"
+  base = "frontend"
+  publish = "."
 
 [[redirects]]
   from = "/api/*"

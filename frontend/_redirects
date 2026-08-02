@@ -1,0 +1,2 @@
+/api/*   https://insightflow-api-l7ju.onrender.com/api/:splat   200
+/health  https://insightflow-api-l7ju.onrender.com/health      200

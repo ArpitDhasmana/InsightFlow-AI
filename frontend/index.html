@@ -33,19 +33,43 @@
   }
   a { color: inherit; }
 
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(14,17,22,.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+  }
   nav {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 16px;
-    padding: 22px 40px;
+    padding: 15px 40px;
     max-width: 1160px;
     margin: 0 auto;
   }
   .brand { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
   .brand span { color: var(--accent); }
-  nav .links { display: flex; gap: 26px; margin-left: 30px; color: var(--ink-soft); font-size: 15px; }
-  nav .links a { text-decoration: none; transition: color .15s ease-out; }
+  nav .links { display: flex; align-items: center; gap: 28px; }
+  nav .links a { color: var(--ink-soft); font-size: 15px; text-decoration: none; transition: color .15s ease-out; }
   nav .links a:hover { color: var(--ink); }
+  .nav-cta {
+    border: 1px solid var(--line);
+    color: var(--ink) !important;
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    transition: border-color .15s ease-out, color .15s ease-out;
+  }
+  .nav-cta:hover { border-color: var(--accent); color: var(--accent) !important; }
+  @media (max-width: 620px) {
+    nav { padding: 14px 22px; }
+    nav .links { gap: 18px; }
+    nav .links a:not(.nav-cta) { display: none; }
+  }
 
   .hero {
     max-width: 1160px;
@@ -237,13 +261,16 @@
 </style>
 </head>
 <body>
-<nav>
-  <div class="brand">Insight<span>Flow</span></div>
-  <div class="links">
-    <a href="#ask">Ask</a>
-    <a href="#results">Insights</a>
-  </div>
-</nav>
+<div class="topbar">
+  <nav>
+    <div class="brand">Insight<span>Flow</span></div>
+    <div class="links">
+      <a href="#ask">Ask</a>
+      <a href="#results">Insights</a>
+      <a class="nav-cta" href="https://github.com/ArpitDhasmana/InsightFlow-AI" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </nav>
+</div>
 
 <header class="hero">
   <h1>Together, we turn data into <em>decisions.</em></h1>

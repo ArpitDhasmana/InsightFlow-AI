@@ -50,7 +50,9 @@ def run(state: PipelineState) -> PipelineState:
         bottom = ranked[-1]
         kpis["top"] = {"name": top[label_key], "value": round(float(top[value_key]), 2)}
         kpis["bottom"] = {"name": bottom[label_key], "value": round(float(bottom[value_key]), 2)}
-        kpis["top_share_pct"] = round(float(top[value_key]) / total * 100, 1) if total else 0
+        # Share of total is meaningless for a ratio metric like margin.
+        if metric != "margin":
+            kpis["top_share_pct"] = round(float(top[value_key]) / total * 100, 1) if total else 0
 
     if len(values) >= 2:
         avg = mean(values)

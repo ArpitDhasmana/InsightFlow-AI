@@ -28,7 +28,6 @@ METRICS = {
 
 DIMENSIONS = {
     "day_of_week": ["day of week", "day of the week", "weekday", "which day", "busiest day"],
-    "fiscal_year": ["fiscal", "financial year"],
     "region": ["region", "geography", "market", "territory"],
     "category": ["category", "product type"],
     "brand": ["brand"],
@@ -115,11 +114,11 @@ def _parse_time(q: str) -> str:
     if fy_year is None and year and ("fiscal" in q or "financial year" in q):
         fy_year, year = year, None
 
-    if "year to date" in q or "ytd" in q:
+    if "year to date" in q or "ytd" in q or "this year" in q:
         return "ytd"
-    if "month to date" in q or "mtd" in q:
+    if "month to date" in q or "mtd" in q or "this month" in q:
         return "mtd"
-    if "quarter to date" in q or "qtd" in q:
+    if "quarter to date" in q or "qtd" in q or "this quarter" in q:
         return "qtd"
 
     m = re.search(r"(?:last|past)\s+(\d+)\s+days", q)
@@ -166,10 +165,11 @@ def _heuristic(question: str) -> dict:
     dimension = _match(DIMENSIONS, q, None)
     time_period = _parse_time(q)
 
-    # 'fy', 'fy25', 'fiscal year' etc. describe the fiscal-year dimension — unless a
-    # specific month within a fiscal year was requested (that's a month filter).
+    # 'fy', 'fy25', 'fiscal year' describe the fiscal-year grouping only when no
+    # other dimension was named (otherwise the FY is just a filter, e.g. products
+    # in FY2026) and no specific month within the FY was requested.
     is_fy = "fiscal" in q or "financial year" in q or re.search(r"\bfy\s?\d{2,4}\b", q)
-    if is_fy and not time_period.startswith("month:"):
+    if is_fy and dimension is None and not time_period.startswith("month:"):
         dimension = "fiscal_year"
 
     if any(w in q for w in ["top", "best", "worst", "rank", "highest", "lowest", "most", "least"]):

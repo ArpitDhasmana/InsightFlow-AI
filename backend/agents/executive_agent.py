@@ -19,11 +19,16 @@ SYSTEM = (
 )
 
 
-def _money(v) -> str:
+def _fmt(metric: str, v) -> str:
     try:
-        return f"${float(v):,.0f}"
+        x = float(v)
     except (TypeError, ValueError):
         return str(v)
+    if metric == "margin":
+        return f"{x:.1f}%"
+    if metric in ("quantity", "orders"):
+        return f"{x:,.0f}"
+    return f"${x:,.0f}"
 
 
 def _heuristic(state: PipelineState) -> tuple[str, list[str]]:
@@ -31,27 +36,41 @@ def _heuristic(state: PipelineState) -> tuple[str, list[str]]:
     kpis = state.get("kpis", {})
     forecast = state.get("forecast", {})
     metric = intent["metric"]
-    total = kpis.get("total", 0)
+    is_margin = metric == "margin"
+    total = kpis.get("total")
 
-    parts = [f"Total {metric} across the selected period is {_money(total)}."]
+    parts: list[str] = []
+    if is_margin:
+        headline = kpis.get("average", total)
+        if headline is not None:
+            prefix = "The average profit margin" if "average" in kpis else "The overall profit margin"
+            parts.append(f"{prefix} is {_fmt(metric, headline)}.")
+    else:
+        parts.append(f"Total {metric} across the selected period is {_fmt(metric, total or 0)}.")
+
     recs: list[str] = []
 
     if "top" in kpis:
         top = kpis["top"]
-        share = kpis.get("top_share_pct", 0)
-        parts.append(f"{top['name']} leads with {_money(top['value'])} ({share}% of the total).")
-        if share >= 40:
-            recs.append(
-                f"Reduce concentration risk: {top['name']} drives {share}% of {metric}. "
-                f"Diversify by investing in underperformers like {kpis.get('bottom', {}).get('name', 'lagging segments')}."
-            )
+        if is_margin:
+            parts.append(f"{top['name']} has the highest margin at {_fmt(metric, top['value'])}.")
+            recs.append(f"Study what makes {top['name']} so profitable and apply those levers elsewhere.")
         else:
-            recs.append(f"Double down on {top['name']} — it is the strongest performer and has room to scale.")
+            share = kpis.get("top_share_pct", 0)
+            parts.append(f"{top['name']} leads with {_fmt(metric, top['value'])} ({share}% of the total).")
+            if share >= 40:
+                recs.append(
+                    f"Reduce concentration risk: {top['name']} drives {share}% of {metric}. "
+                    f"Diversify by investing in underperformers like {kpis.get('bottom', {}).get('name', 'lagging segments')}."
+                )
+            else:
+                recs.append(f"Double down on {top['name']} — it is the strongest performer and has room to scale.")
 
     if "bottom" in kpis:
         bottom = kpis["bottom"]
-        parts.append(f"{bottom['name']} is the weakest at {_money(bottom['value'])}.")
-        recs.append(f"Investigate {bottom['name']}: run a targeted campaign or review pricing to lift performance.")
+        descriptor = "the thinnest margin" if is_margin else "the weakest"
+        parts.append(f"{bottom['name']} has {descriptor} at {_fmt(metric, bottom['value'])}.")
+        recs.append(f"Investigate {bottom['name']}: review pricing, cost, or mix to lift performance.")
 
     if kpis.get("anomalies"):
         names = ", ".join(a["name"] for a in kpis["anomalies"])
@@ -61,14 +80,14 @@ def _heuristic(state: PipelineState) -> tuple[str, list[str]]:
     if forecast.get("available"):
         direction = forecast["direction"]
         nxt = forecast["next_value"]
-        parts.append(f"The near-term forecast trends {direction}, with the next period projected at {_money(nxt)}.")
+        parts.append(f"The near-term forecast trends {direction}, with the next period projected at {_fmt(metric, nxt)}.")
         if direction == "down":
             recs.append("Forecast is declining — accelerate pipeline and retention initiatives now to reverse the trend.")
         elif direction == "up":
             recs.append("Momentum is positive — secure inventory and capacity to capture the projected upside.")
 
     if "period_growth_pct" in kpis:
-        parts.append(f"Growth over the period is {kpis['period_growth_pct']}%.")
+        parts.append(f"Change over the period is {kpis['period_growth_pct']}%.")
 
     if not recs:
         recs.append("Maintain current strategy and set up KPI monitoring to catch changes early.")

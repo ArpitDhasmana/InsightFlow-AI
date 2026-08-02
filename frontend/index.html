@@ -509,13 +509,16 @@ function render(data) {
   results.appendChild(card("Executive Summary", `<div class="summary">${data.executive_summary}</div>`, next()));
 
   const k = data.kpis || {};
+  const isPct = k.metric === "margin";
+  const kval = (v) => (isPct ? Number(v).toFixed(1) + "%" : fmtCompact(v));
+  const kfull = (v) => (isPct ? Number(v).toFixed(2) + "%" : fmt(v));
   const tiles = [];
-  if (k.total !== undefined) tiles.push({ label: "Total " + (k.metric || ""), value: fmtCompact(k.total), full: fmt(k.total) });
-  if (k.top) tiles.push({ label: "Top · " + k.top.name, value: fmtCompact(k.top.value), full: fmt(k.top.value), target: k.top.name });
-  if (k.bottom) tiles.push({ label: "Lowest · " + k.bottom.name, value: fmtCompact(k.bottom.value), full: fmt(k.bottom.value), target: k.bottom.name });
-  if (k.average !== undefined) tiles.push({ label: "Average", value: fmtCompact(k.average), full: fmt(k.average) });
+  if (k.total !== undefined) tiles.push({ label: "Total " + (k.metric || ""), value: kval(k.total), full: kfull(k.total) });
+  if (k.top) tiles.push({ label: "Top · " + k.top.name, value: kval(k.top.value), full: kfull(k.top.value), target: k.top.name });
+  if (k.bottom) tiles.push({ label: "Lowest · " + k.bottom.name, value: kval(k.bottom.value), full: kfull(k.bottom.value), target: k.bottom.name });
+  if (k.average !== undefined) tiles.push({ label: isPct ? "Average margin" : "Average", value: kval(k.average), full: kfull(k.average) });
   if (k.period_growth_pct !== undefined) tiles.push({ label: "Period Growth", value: k.period_growth_pct + "%", neg: k.period_growth_pct < 0 });
-  if (data.forecast && data.forecast.available) tiles.push({ label: "Forecast · next", value: fmtCompact(data.forecast.next_value), full: fmt(data.forecast.next_value) });
+  if (data.forecast && data.forecast.available) tiles.push({ label: "Forecast · next", value: kval(data.forecast.next_value), full: kfull(data.forecast.next_value) });
 
   if (tiles.length) {
     const strip = card("Key Metrics", '<div class="kpis"></div>', next());

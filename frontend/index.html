@@ -46,15 +46,6 @@
   nav .links { display: flex; gap: 26px; margin-left: 30px; color: var(--ink-soft); font-size: 15px; }
   nav .links a { text-decoration: none; transition: color .15s ease-out; }
   nav .links a:hover { color: var(--ink); }
-  .mode {
-    margin-left: auto;
-    font-size: 13px;
-    padding: 7px 16px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    color: var(--accent-2);
-    background: rgba(45,212,191,.08);
-  }
 
   .hero {
     max-width: 1160px;
@@ -252,7 +243,6 @@
     <a href="#ask">Ask</a>
     <a href="#results">Insights</a>
   </div>
-  <span class="mode" id="mode">checking…</span>
 </nav>
 
 <header class="hero">
@@ -299,12 +289,6 @@ SAMPLES.forEach(s => {
   b.textContent = s;
   b.onclick = () => { document.getElementById("q").value = s; ask(); };
   samplesEl.appendChild(b);
-});
-
-fetch(API_BASE + "/health").then(r => r.json()).then(h => {
-  const m = document.getElementById("mode");
-  m.textContent = h.llm_powered ? "LLM-powered" : "Heuristic mode";
-  if (!h.seeded) m.textContent = "DB not seeded";
 });
 
 const input = document.getElementById("q");
